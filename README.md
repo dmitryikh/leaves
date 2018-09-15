@@ -15,6 +15,12 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
 
 ## Usage examples
 
+In order to start, go get this repository:
+
+``` sh
+go get github.com/dmitryikh/leaves
+```
+
 Minimal example:
 
 ```
@@ -23,8 +29,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"leaves"
 	"os"
+
+	"github.com/dmitryikh/leaves"
 )
 
 func main() {
