@@ -31,7 +31,7 @@ func DenseMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool
 			return mat, fmt.Errorf("too few columns")
 		}
 
-		column := uint32(0)
+		var column uint32
 		for col := startIndex; col < uint32(len(tokens)); col++ {
 			if len(tokens[col]) == 0 {
 				break
@@ -93,7 +93,7 @@ func CSRMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool) 
 		}
 
 		mat.RowHeaders = append(mat.RowHeaders, uint32(len(mat.Values)))
-		column := uint32(0)
+		var column uint32
 		for col := startIndex; col < uint32(len(tokens)); col++ {
 			if len(tokens[col]) == 0 {
 				break
@@ -150,7 +150,7 @@ func DenseMatFromCsv(reader *bufio.Reader,
 		}
 		tokens := strings.Split(line, delimiter)
 
-		column := uint32(0)
+		var column uint32
 		for col := startIndex; col < uint32(len(tokens)); col++ {
 			var value float64
 			if len(tokens[col]) == 0 {

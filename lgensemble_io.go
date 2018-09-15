@@ -221,11 +221,11 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 	if err := mapValueCompare(params, "num_tree_per_iteration", "1"); err != nil {
 		return nil, err
 	}
-	if maxFeatureIdx, err := mapValueToInt(params, "max_feature_idx"); err != nil {
+	maxFeatureIdx, err := mapValueToInt(params, "max_feature_idx")
+	if err != nil {
 		return nil, err
-	} else {
-		e.MaxFeatureIdx = uint32(maxFeatureIdx)
 	}
+	e.MaxFeatureIdx = uint32(maxFeatureIdx)
 
 	treeSizesStr, isFound := params["tree_sizes"]
 	if !isFound {
