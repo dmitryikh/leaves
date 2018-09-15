@@ -1,0 +1,159 @@
+tree
+version=v2
+num_class=1
+num_tree_per_iteration=1
+label_index=0
+max_feature_idx=1
+objective=binary sigmoid:1
+feature_names=X1 X2
+feature_infos=[0:999] 1:0:3:100:-1
+tree_sizes=358 365
+
+Tree=0
+num_leaves=3
+num_cat=1
+split_feature=1 0
+split_gain=138.409 13.4409
+threshold=0 340.50000000000006
+decision_type=9 2
+left_child=-1 -2
+right_child=1 -3
+leaf_value=0.56697267424823339 0.3584987837673016 0.41213915936587919
+leaf_count=200 341 459
+internal_value=0 -0.392018
+internal_count=1000 800
+cat_boundaries=0 4
+cat_threshold=0 0 0 16
+shrinkage=1
+
+
+Tree=1
+num_leaves=3
+num_cat=1
+split_feature=1 0
+split_gain=118.043 10.5922
+threshold=0 340.50000000000006
+decision_type=9 2
+left_child=-1 -2
+right_child=1 -3
+leaf_value=0.12883103567558912 -0.063872842243335157 -0.016484332942214807
+leaf_count=200 341 459
+internal_value=0 -0.349854
+internal_count=1000 800
+cat_boundaries=0 4
+cat_threshold=0 0 0 16
+shrinkage=0.1
+
+
+end of trees
+
+feature importances:
+X1=2
+X2=2
+
+parameters:
+[boosting: gbdt]
+[objective: binary]
+[metric: binary]
+[tree_learner: serial]
+[device_type: cpu]
+[data: ]
+[valid: ]
+[num_iterations: 100]
+[learning_rate: 0.1]
+[num_leaves: 3]
+[num_threads: 0]
+[max_depth: -1]
+[min_data_in_leaf: 100]
+[min_sum_hessian_in_leaf: 0.001]
+[bagging_fraction: 1]
+[bagging_freq: 0]
+[bagging_seed: 3]
+[feature_fraction: 1]
+[feature_fraction_seed: 2]
+[early_stopping_round: 0]
+[max_delta_step: 0]
+[lambda_l1: 0]
+[lambda_l2: 0]
+[min_gain_to_split: 0]
+[drop_rate: 0.1]
+[max_drop: 50]
+[skip_drop: 0.5]
+[xgboost_dart_mode: 0]
+[uniform_drop: 0]
+[drop_seed: 4]
+[top_rate: 0.2]
+[other_rate: 0.1]
+[min_data_per_group: 100]
+[max_cat_threshold: 32]
+[cat_l2: 10]
+[cat_smooth: 10]
+[max_cat_to_onehot: 4]
+[top_k: 20]
+[monotone_constraints: ]
+[feature_contri: ]
+[forcedsplits_filename: ]
+[verbosity: -1]
+[max_bin: 255]
+[min_data_in_bin: 3]
+[bin_construct_sample_cnt: 200000]
+[histogram_pool_size: -1]
+[data_random_seed: 1]
+[output_model: LightGBM_model.txt]
+[snapshot_freq: -1]
+[input_model: ]
+[output_result: LightGBM_predict_result.txt]
+[initscore_filename: ]
+[valid_data_initscores: ]
+[pre_partition: 0]
+[enable_bundle: 1]
+[max_conflict_rate: 0]
+[is_enable_sparse: 1]
+[sparse_threshold: 0.8]
+[use_missing: 1]
+[zero_as_missing: 0]
+[two_round: 0]
+[save_binary: 0]
+[enable_load_from_binary_file: 1]
+[header: 0]
+[label_column: ]
+[weight_column: ]
+[group_column: ]
+[ignore_column: ]
+[categorical_feature: ]
+[predict_raw_score: 0]
+[predict_leaf_index: 0]
+[predict_contrib: 0]
+[num_iteration_predict: -1]
+[pred_early_stop: 0]
+[pred_early_stop_freq: 10]
+[pred_early_stop_margin: 10]
+[convert_model_language: ]
+[convert_model: gbdt_prediction.cpp]
+[num_class: 1]
+[is_unbalance: 0]
+[scale_pos_weight: 1]
+[sigmoid: 1]
+[boost_from_average: 1]
+[reg_sqrt: 0]
+[alpha: 0.9]
+[fair_c: 1]
+[poisson_max_delta_step: 0.7]
+[tweedie_variance_power: 1.5]
+[max_position: 20]
+[label_gain: ]
+[metric_freq: 1]
+[is_provide_training_metric: 0]
+[eval_at: ]
+[num_machines: 1]
+[local_listen_port: 12400]
+[time_out: 120]
+[machine_list_filename: ]
+[machines: ]
+[gpu_platform_id: -1]
+[gpu_device_id: -1]
+[gpu_use_dp: 0]
+
+end of parameters
+
+pandas_categorical:[]

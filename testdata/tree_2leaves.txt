@@ -1,0 +1,10 @@
+Tree=0
+num_leaves=2
+num_cat=0
+split_feature=0
+threshold=5.0
+decision_type=2
+left_child=-1
+right_child=-2
+leaf_count=300 700
+leaf_value=0.43 0.59
