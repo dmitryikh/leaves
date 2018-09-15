@@ -52,7 +52,7 @@ func (e *LGEnsemble) PredictCSR(indptr []uint32, cols []uint32, vals []float64, 
 
 func (e *LGEnsemble) PredictDense(vals []float64, nrows uint32, ncols uint32, predictions []float64, nTrees int) error {
 	if ncols == 0 || e.MaxFeatureIdx > ncols-1 {
-		return fmt.Errorf("incorrect ncols")
+		return fmt.Errorf("incorrect number of columns")
 	}
 	for i := uint32(0); i < nrows; i++ {
 		predictions[i] = e.Predict(vals[i*ncols:(i+1)*ncols], nTrees)
