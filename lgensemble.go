@@ -10,7 +10,7 @@ type LGEnsemble struct {
 	MaxFeatureIdx uint32
 }
 
-func (e *LGEnsemble) nTrees() int {
+func (e *LGEnsemble) NTrees() int {
 	return len(e.Trees)
 }
 
@@ -20,9 +20,9 @@ func (e *LGEnsemble) Predict(fvals []float64, nTrees int) float64 {
 	}
 	ret := 0.0
 	if nTrees > 0 {
-		nTrees = minInt(nTrees, e.nTrees())
+		nTrees = minInt(nTrees, e.NTrees())
 	} else {
-		nTrees = e.nTrees()
+		nTrees = e.NTrees()
 	}
 
 	for i := 0; i < nTrees; i++ {
