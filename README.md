@@ -23,13 +23,13 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
 
 In order to start, go get this repository:
 
-``` sh
+```sh
 go get github.com/dmitryikh/leaves
 ```
 
 Minimal example:
 
-```
+```go
 package main
 
 import (
