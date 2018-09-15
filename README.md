@@ -4,22 +4,16 @@
 
 _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting Regression Trees) models in **pure Go**. The goal of the project - make it possible to use models from popular GBRT frameworks in Go programs without C API bindings.
 
-# Features
+## Features
 
   * Support LightGBM ([repo](https://github.com/Microsoft/LightGBM)) models:
     * reading models from text format
     * supporting numerical & categorical features
-    * addition optimizations for categorical features (for exaMple, _one hot_ decision rule)
+    * addition optimizations for categorical features (for example, _one hot_ decision rule)
     * addition optimizations exploiting only prediction usage
 
 
-# Limitations
-
-  * LightGBM models:
-    * not supported transformations functions (sigmoid, lambdarank, etc). Output scores is _raw scores_
-
-
-# Usage examples
+## Usage examples
 
 Minimal example:
 
@@ -54,6 +48,11 @@ func main() {
 	fmt.Printf("Prediction for %v: %f\n", fvals, p)
 }
 ```
+
+## Limitations
+
+  * LightGBM models:
+    * not supported transformations functions (sigmoid, lambdarank, etc). Output scores is _raw scores_
 
 ## Contacts
 
