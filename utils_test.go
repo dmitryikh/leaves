@@ -1,0 +1,153 @@
+package leaves
+
+import (
+	"bufio"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestFirstNonZeroBit(t *testing.T) {
+	const length = 10
+	const size = 32
+	bitset := make([]uint32, length)
+	_, err := firstNonZeroBit(bitset)
+	if err == nil {
+		t.Error("all zeros bitset should fail")
+	}
+
+	check := func(trueAnswer uint32) {
+		pos, err := firstNonZeroBit(bitset)
+		if err != nil {
+			t.Error(err.Error())
+		}
+		if pos != trueAnswer {
+			t.Errorf("%d fail", trueAnswer)
+		}
+	}
+
+	bitset[9] |= 1 << 31
+	check(9*size + 31)
+
+	bitset[3] |= 1 << 3
+	check(3*size + 3)
+
+	bitset[0] |= 1 << 7
+	check(7)
+
+	bitset[0] |= 1 << 0
+	check(0)
+}
+
+func TestNumberOfSetBits(t *testing.T) {
+	const length = 10
+	bitset := make([]uint32, length)
+
+	check := func(trueAnswer uint32) {
+		if numberOfSetBits(bitset) != trueAnswer {
+			t.Errorf("%d fail", trueAnswer)
+		}
+	}
+
+	bitset[9] |= 1 << 31
+	check(1)
+
+	bitset[3] |= 1 << 3
+	check(2)
+
+	bitset[0] |= 1 << 7
+	check(3)
+
+	bitset[0] |= 1 << 0
+	check(4)
+}
+
+func TestReadParams(t *testing.T) {
+	path := filepath.Join("testdata", "model_simple.txt")
+	reader, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bufReader := bufio.NewReader(reader)
+
+	// Читаем заголовок файла
+	params, err := readParamsUntilBlank(bufReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	trueMap := map[string]string{
+		"version":                "v2",
+		"num_class":              "1",
+		"num_tree_per_iteration": "1",
+		"label_index":            "0",
+		"max_feature_idx":        "1",
+		"objective":              "binary sigmoid:1",
+		"feature_names":          "X1 X2",
+		"feature_infos":          "[0:999] 1:0:3:100:-1",
+		"tree_sizes":             "358 365",
+	}
+	for key, val := range trueMap {
+		if params[key] != val {
+			t.Errorf("params[%s] != %s", key, val)
+		}
+	}
+
+	// Читаем первое дерево
+	params, err = readParamsUntilBlank(bufReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	trueMap = map[string]string{
+		"Tree":           "0",
+		"num_leaves":     "3",
+		"num_cat":        "1",
+		"split_feature":  "1 0",
+		"split_gain":     "138.409 13.4409",
+		"threshold":      "0 340.50000000000006",
+		"decision_type":  "9 2",
+		"left_child":     "-1 -2",
+		"right_child":    "1 -3",
+		"leaf_value":     "0.56697267424823339 0.3584987837673016 0.41213915936587919",
+		"leaf_count":     "200 341 459",
+		"internal_value": "0 -0.392018",
+		"internal_count": "1000 800",
+		"cat_boundaries": "0 4",
+		"cat_threshold":  "0 0 0 16",
+		"shrinkage":      "1",
+	}
+	for key, val := range trueMap {
+		if params[key] != val {
+			t.Errorf("params[%s] != %s", key, val)
+		}
+	}
+
+	// Читаем второe дерево
+	params, err = readParamsUntilBlank(bufReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	trueMap = map[string]string{
+		"Tree":           "1",
+		"num_leaves":     "3",
+		"num_cat":        "1",
+		"split_feature":  "1 0",
+		"split_gain":     "118.043 10.5922",
+		"threshold":      "0 340.50000000000006",
+		"decision_type":  "9 2",
+		"left_child":     "-1 -2",
+		"right_child":    "1 -3",
+		"leaf_value":     "0.12883103567558912 -0.063872842243335157 -0.016484332942214807",
+		"leaf_count":     "200 341 459",
+		"internal_value": "0 -0.349854",
+		"internal_count": "1000 800",
+		"cat_boundaries": "0 4",
+		"cat_threshold":  "0 0 0 16",
+		"shrinkage":      "0.1",
+	}
+	for key, val := range trueMap {
+		if params[key] != val {
+			t.Errorf("params[%s] != %s", key, val)
+		}
+	}
+}
