@@ -179,7 +179,7 @@ func almostEqualFloat64(a, b, threshold float64) bool {
 
 func almostEqualFloat64Slices(a, b []float64, threshold float64) error {
 	if len(a) != len(b) {
-		return fmt.Errorf("differens sizes: len(a) = %d, len(b) = %d", len(a), len(b))
+		return fmt.Errorf("different sizes: len(a) = %d, len(b) = %d", len(a), len(b))
 	}
 	for i := range a {
 		if math.Abs(a[i]-b[i]) > threshold {

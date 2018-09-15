@@ -71,6 +71,3 @@ func main() {
 
 In case if you are interested in the project or if you have questions, please contact with me by
 email: khdmitryi ```at``` gmail.com
-
-
-    

@@ -71,7 +71,7 @@ func lgTreeFromReader(reader *bufio.Reader) (LGTree, error) {
 	catThresholds := make([]uint32, 0)
 	catBoundaries := make([]uint32, 0)
 	if numCategorical > 0 {
-		// first element set to zero for consistensy
+		// first element set to zero for consistency
 		t.catBoundaries = make([]uint32, 1)
 		catThresholds, err = mapValueToUint32Slice(params, "cat_threshold")
 		if err != nil {
