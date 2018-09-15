@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// LGEnsemble ..
+// LGEnsemble is LightGBM model (ensemble of trees)
 type LGEnsemble struct {
 	Trees         []LGTree
 	MaxFeatureIdx uint32
@@ -14,6 +14,10 @@ func (e *LGEnsemble) NTrees() int {
 	return len(e.Trees)
 }
 
+// Predict calculates prediction from ensembles of trees. Only `nTrees` first
+// trees will be used. If `len(fvals)` is not enough function will quitely
+// return 0.0. Note, that result is a raw score (before sigmoid function
+// transformation and etc)
 func (e *LGEnsemble) Predict(fvals []float64, nTrees int) float64 {
 	if e.MaxFeatureIdx+1 > uint32(len(fvals)) {
 		return 0.0
@@ -31,6 +35,11 @@ func (e *LGEnsemble) Predict(fvals []float64, nTrees int) float64 {
 	return ret
 }
 
+// PredictCSR calculates predictions from ensembles of trees. `indptr`, `cols`,
+// `vals` represent data structures from Compressed Sparse Row Matrix format (see CSRMat).
+// Only `nTrees` first trees will be used.
+// Note, that result is a raw score (before sigmoid function transofrmation and etc).
+// Note, `predictions` slice should be properly allocated on call side
 func (e *LGEnsemble) PredictCSR(indptr []uint32, cols []uint32, vals []float64, predictions []float64, nTrees int) {
 	fvals := make([]float64, e.MaxFeatureIdx+1)
 	for i := 0; i < len(indptr)-1; i++ {
@@ -50,6 +59,11 @@ func (e *LGEnsemble) PredictCSR(indptr []uint32, cols []uint32, vals []float64, 
 	}
 }
 
+// PredictDense calculates predictions from ensembles of trees. `vals`, `rows`,
+// `cols` represent data structures from Rom Major Matrix format (see DenseMat).
+// Only `nTrees` first trees will be used.
+// Note, that result is a raw score (before sigmoid function transofrmation and etc).
+// Note, `predictions` slice should be properly allocated on call side
 func (e *LGEnsemble) PredictDense(vals []float64, nrows uint32, ncols uint32, predictions []float64, nTrees int) error {
 	if ncols == 0 || e.MaxFeatureIdx > ncols-1 {
 		return fmt.Errorf("incorrect number of columns")

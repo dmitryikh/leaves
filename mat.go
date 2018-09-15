@@ -4,12 +4,15 @@ import (
 	"fmt"
 )
 
+// DenseMat is dense matrix data structure
 type DenseMat struct {
 	Values []float64
 	Cols   uint32
 	Rows   uint32
 }
 
+// DenseMatFromArray converts arrays of `values` to DenseMat using shape
+// information `rows` and `cols`
 func DenseMatFromArray(values []float64, rows uint32, cols uint32) (DenseMat, error) {
 	mat := DenseMat{}
 	if uint32(len(values)) != cols*rows {
@@ -21,12 +24,14 @@ func DenseMatFromArray(values []float64, rows uint32, cols uint32) (DenseMat, er
 	return mat, nil
 }
 
+// CSRMat is Compressed Sparse Row matrix data structure
 type CSRMat struct {
 	RowHeaders []uint32
 	ColIndexes []uint32
 	Values     []float64
 }
 
+// Rows returns number of rows in the matrix
 func (m *CSRMat) Rows() uint32 {
 	if len(m.RowHeaders) == 0 {
 		return 0
@@ -34,6 +39,8 @@ func (m *CSRMat) Rows() uint32 {
 	return uint32(len(m.RowHeaders)) - 1
 }
 
+// CSRMatFromArray converts arrays of `values` to CSRMat using shape information
+// `rows` and `cols`. See also DenseMatFromArray to store dense data in matrix
 func CSRMatFromArray(values []float64, rows uint32, cols uint32) (CSRMat, error) {
 	mat := CSRMat{}
 	if uint32(len(values)) != cols*rows {
