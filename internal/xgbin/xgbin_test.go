@@ -9,7 +9,7 @@ import (
 )
 
 func TestReadGBTree(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "agaricus.model")
+	path := filepath.Join("..", "..", "testdata", "xgagaricus.model")
 	reader, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
