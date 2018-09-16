@@ -21,8 +21,8 @@ func convertMissingType(decisionType uint32) (uint8, error) {
 	return missingType, nil
 }
 
-func lgTreeFromReader(reader *bufio.Reader) (LGTree, error) {
-	t := LGTree{}
+func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
+	t := lgTree{}
 	params, err := readParamsUntilBlank(reader)
 	if err != nil {
 		return t, err
@@ -83,8 +83,8 @@ func lgTreeFromReader(reader *bufio.Reader) (LGTree, error) {
 		}
 	}
 
-	createNumericalNode := func(idx int32) (LGNode, error) {
-		node := LGNode{}
+	createNumericalNode := func(idx int32) (lgNode, error) {
+		node := lgNode{}
 		missingType, err := convertMissingType(decisionTypes[idx])
 		if err != nil {
 			return node, err
@@ -105,8 +105,8 @@ func lgTreeFromReader(reader *bufio.Reader) (LGTree, error) {
 		return node, nil
 	}
 
-	createCategoricalNode := func(idx int32) (LGNode, error) {
-		node := LGNode{}
+	createCategoricalNode := func(idx int32) (lgNode, error) {
+		node := lgNode{}
 		missingType, err := convertMissingType(decisionTypes[idx])
 		if err != nil {
 			return node, err
@@ -147,7 +147,7 @@ func lgTreeFromReader(reader *bufio.Reader) (LGTree, error) {
 		}
 		return node, nil
 	}
-	createNode := func(idx int32) (LGNode, error) {
+	createNode := func(idx int32) (lgNode, error) {
 		if decisionTypes[idx]&1 > 0 {
 			return createCategoricalNode(idx)
 		}
@@ -156,7 +156,7 @@ func lgTreeFromReader(reader *bufio.Reader) (LGTree, error) {
 	origNodeIdxStack := make([]uint32, 0, numNodes)
 	convNodeIdxStack := make([]uint32, 0, numNodes)
 	visited := make([]bool, numNodes)
-	t.nodes = make([]LGNode, 0, numNodes)
+	t.nodes = make([]lgNode, 0, numNodes)
 	node, err := createNode(0)
 	if err != nil {
 		return t, err
@@ -238,7 +238,7 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 		return nil, fmt.Errorf("no trees in file (based on tree_sizes value)")
 	}
 
-	e.Trees = make([]LGTree, 0, nTrees)
+	e.Trees = make([]lgTree, 0, nTrees)
 	for i := 0; i < nTrees; i++ {
 		tree, err := lgTreeFromReader(reader)
 		if err != nil {

@@ -17,8 +17,7 @@ const (
 
 const zeroThreshold = 1e-35
 
-// LGNode represents tree's node with decision rule
-type LGNode struct {
+type lgNode struct {
 	Threshold float64
 	Left      uint32
 	Right     uint32
@@ -26,16 +25,15 @@ type LGNode struct {
 	Flags     uint8
 }
 
-// LGTree ...
-type LGTree struct {
-	nodes         []LGNode
+type lgTree struct {
+	nodes         []lgNode
 	leafValues    []float64
 	catBoundaries []uint32
 	catThresholds []uint32
 	nCategorical  uint32
 }
 
-func (t *LGTree) numericalDecision(node *LGNode, fval float64) bool {
+func (t *lgTree) numericalDecision(node *lgNode, fval float64) bool {
 	if math.IsNaN(fval) && (node.Flags&missingNan == 0) {
 		fval = 0.0
 	}
@@ -45,7 +43,7 @@ func (t *LGTree) numericalDecision(node *LGNode, fval float64) bool {
 	return fval <= node.Threshold
 }
 
-func (t *LGTree) categoricalDecision(node *LGNode, fval float64) bool {
+func (t *lgTree) categoricalDecision(node *lgNode, fval float64) bool {
 	ifval := int32(fval)
 	if ifval < 0 {
 		return false
@@ -63,14 +61,14 @@ func (t *LGTree) categoricalDecision(node *LGNode, fval float64) bool {
 	return t.findInBitset(uint32(node.Threshold), uint32(ifval))
 }
 
-func (t *LGTree) decision(node *LGNode, fval float64) bool {
+func (t *lgTree) decision(node *lgNode, fval float64) bool {
 	if node.Flags&categorical > 0 {
 		return t.categoricalDecision(node, fval)
 	}
 	return t.numericalDecision(node, fval)
 }
 
-func (t *LGTree) predict(fvals []float64) float64 {
+func (t *lgTree) predict(fvals []float64) float64 {
 	if len(t.nodes) == 0 {
 		return 0.0
 	}
@@ -92,7 +90,7 @@ func (t *LGTree) predict(fvals []float64) float64 {
 	}
 }
 
-func (t *LGTree) findInBitset(idx uint32, pos uint32) bool {
+func (t *lgTree) findInBitset(idx uint32, pos uint32) bool {
 	i1 := pos / 32
 	idxS := t.catBoundaries[idx]
 	idxE := t.catBoundaries[idx+1]
@@ -103,14 +101,14 @@ func (t *LGTree) findInBitset(idx uint32, pos uint32) bool {
 	return (t.catThresholds[idxS+i1]>>i2)&1 > 0
 }
 
-func (t *LGTree) nLeaves() int {
+func (t *lgTree) nLeaves() int {
 	if len(t.nodes) == 0 {
 		return 0
 	}
 	return len(t.nodes) + 1
 }
 
-func (t *LGTree) nNodes() int {
+func (t *lgTree) nNodes() int {
 	return len(t.nodes)
 }
 
@@ -118,16 +116,16 @@ func isZero(fval float64) bool {
 	return (fval > -zeroThreshold && fval <= zeroThreshold)
 }
 
-func categoricalNode(feature uint32, missingType uint8, threshold uint32, catType uint8) LGNode {
-	node := LGNode{}
+func categoricalNode(feature uint32, missingType uint8, threshold uint32, catType uint8) lgNode {
+	node := lgNode{}
 	node.Feature = feature
 	node.Flags = categorical | missingType | catType
 	node.Threshold = float64(threshold)
 	return node
 }
 
-func numericalNode(feature uint32, missingType uint8, threshold float64, defaultType uint8) LGNode {
-	node := LGNode{}
+func numericalNode(feature uint32, missingType uint8, threshold float64, defaultType uint8) lgNode {
+	node := lgNode{}
 	node.Feature = feature
 	node.Flags = missingType | defaultType
 	node.Threshold = threshold
