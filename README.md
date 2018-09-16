@@ -17,6 +17,9 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
     * supporting numerical & categorical features
     * addition optimizations for categorical features (for example, _one hot_ decision rule)
     * addition optimizations exploiting only prediction usage
+  * Support XGBoost ([repo](https://github.com/dmlc/xgboost)) models:
+    * reading models from binary format
+    * supporting missing values (`nan`)
 
 
 ## Usage examples
@@ -62,10 +65,15 @@ func main() {
 }
 ```
 
+In order to use XGBoost model, just change `leaves.LGEnsembleFromReader`, to `leaves.XGEnsembleFromReader`. For mode usage examples see [leaves_test.go](leaves_test.go).
+
 ## Limitations
 
   * LightGBM models:
-    * not supported transformations functions (sigmoid, lambdarank, etc). Output scores is _raw scores_
+    * no support transformations functions (sigmoid, lambdarank, etc). Output scores is _raw scores_
+  * XGBoost models:
+    * no support transformations functions. Output scores is _raw scores_
+	* support only `gbtree` models (most common)
 
 ## Contacts
 
