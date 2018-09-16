@@ -67,6 +67,24 @@ func main() {
 
 In order to use XGBoost model, just change `leaves.LGEnsembleFromReader`, to `leaves.XGEnsembleFromReader`. For mode usage examples see [leaves_test.go](leaves_test.go).
 
+## Benchmark
+
+Below are comparisons of prediction speed on batches (~1000 objects in 1
+call). Hardware: MacBook Pro (15-inch, 2017), 2,9 GHz Intel Core i7, 16 ГБ
+2133 MHz LPDDR3. C API implementations were called from python bindings. But
+large batch size should neglect overhead of python bindings. _leaves_
+benchmarks were run by means of golang test framework: `go test -bench`. See
+[benchmark](benchmark) for mode details on measurments. See
+[testdata/README.md](testdata/README.md) for data preparation pipelines.
+
+Single thread:
+
+| Test Case | Features | Trees | Batch size |  C API  | _leaves_ |
+|-----------|----------|-------|------------|---------|----------|
+| LightGBM [MS LTR](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 137 |500 | 1000 | 49ms | 51ms |
+| LightGBM [Higgs](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 28 | 500 | 1000 | 50ms | 50ms |
+| XGBoost Higgs | 28 | 500 | 1000 | 44ms | 50ms |
+
 ## Limitations
 
   * LightGBM models:
