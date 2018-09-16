@@ -70,7 +70,7 @@ In order to use XGBoost model, just change `leaves.LGEnsembleFromReader`, to `le
 
 ## Benchmark
 
-Below are comparisons of prediction speed on batches (~1000 objects in 1
+Below are comparisons of prediction speed on batches (~1000 objects in 1 API
 call). Hardware: MacBook Pro (15-inch, 2017), 2,9 GHz Intel Core i7, 16 ГБ
 2133 MHz LPDDR3. C API implementations were called from python bindings. But
 large batch size should neglect overhead of python bindings. _leaves_
