@@ -188,3 +188,15 @@ func almostEqualFloat64Slices(a, b []float64, threshold float64) error {
 	}
 	return nil
 }
+
+// Sigmoid applies sigmoid transformation to value
+func Sigmoid(x float64) float64 {
+	return 1.0 / (1.0 + math.Exp(-x))
+}
+
+// SigmoidFloat64SliceInplace applies sigmoid transformation to each value in slice. Inplace
+func SigmoidFloat64SliceInplace(vec []float64) {
+	for i := range vec {
+		vec[i] = Sigmoid(vec[i])
+	}
+}
