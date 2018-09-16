@@ -1,0 +1,194 @@
+package leaves
+
+import (
+	"bufio"
+	"fmt"
+
+	"github.com/dmitryikh/leaves/internal/xgbin"
+)
+
+func xgSplitIndex(origNode *xgbin.Node) uint32 {
+	return origNode.SIndex & ((1 << 31) - 1)
+}
+
+func xgDefaultLeft(origNode *xgbin.Node) bool {
+	return (origNode.SIndex >> 31) != 0
+}
+
+func xgIsLeaf(origNode *xgbin.Node) bool {
+	return origNode.CLeft == -1
+}
+
+func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (LGTree, error) {
+	t := LGTree{}
+
+	if origTree.Param.NumFeature > int32(numFeatures) {
+		return t, fmt.Errorf(
+			"tree number of features %d, but header number of features %d",
+			origTree.Param.NumFeature,
+			numFeatures,
+		)
+	}
+
+	if origTree.Param.NumRoots != 1 {
+		return t, fmt.Errorf("support only trees with 1 root (got %d)", origTree.Param.NumRoots)
+	}
+
+	if origTree.Param.NumNodes == 0 {
+		return t, fmt.Errorf("tree with zero number of nodes")
+	}
+	numNodes := origTree.Param.NumNodes
+
+	// XGBoost doesn't support categorical features
+	t.nCategorical = 0
+
+	if numNodes == 1 {
+		// special case
+		// we mimic decision rule but left and right childs lead to the same result
+		t.nodes = make([]LGNode, 0, numNodes)
+		node := numericalNode(0, 0, 0.0, 0)
+		node.Flags |= leftLeaf
+		node.Flags |= rightLeaf
+		node.Left = uint32(len(t.leafValues))
+		t.leafValues = append(t.leafValues, float64(origTree.Nodes[0].Info))
+		return t, nil
+	}
+
+	createNode := func(origNode *xgbin.Node) (LGNode, error) {
+		node := LGNode{}
+		// count nan as missing value
+		// NOTE: this differs with XGBosst realization: could be a problem
+		missingType := uint8(missingNan)
+
+		defaultType := uint8(0)
+		if xgDefaultLeft(origNode) {
+			defaultType = defaultLeft
+		}
+		node = numericalNode(xgSplitIndex(origNode), missingType, float64(origNode.Info), defaultType)
+
+		if origNode.CLeft < 0 {
+			return node, fmt.Errorf("logic error: got origNode.CLeft < 0")
+		}
+		if origNode.CRight < 0 {
+			return node, fmt.Errorf("logic error: got origNode.CRight < 0")
+		}
+		if xgIsLeaf(&origTree.Nodes[origNode.CLeft]) {
+			node.Flags |= leftLeaf
+			node.Left = uint32(len(t.leafValues))
+			t.leafValues = append(t.leafValues, float64(origTree.Nodes[origNode.CLeft].Info))
+		}
+		if xgIsLeaf(&origTree.Nodes[origNode.CRight]) {
+			node.Flags |= rightLeaf
+			node.Right = uint32(len(t.leafValues))
+			t.leafValues = append(t.leafValues, float64(origTree.Nodes[origNode.CRight].Info))
+		}
+		return node, nil
+	}
+
+	origNodeIdxStack := make([]uint32, 0, numNodes)
+	convNodeIdxStack := make([]uint32, 0, numNodes)
+	visited := make([]bool, numNodes)
+	t.nodes = make([]LGNode, 0, numNodes)
+	node, err := createNode(&origTree.Nodes[0])
+	if err != nil {
+		return t, err
+	}
+	t.nodes = append(t.nodes, node)
+	origNodeIdxStack = append(origNodeIdxStack, 0)
+	convNodeIdxStack = append(convNodeIdxStack, 0)
+	for len(origNodeIdxStack) > 0 {
+		convIdx := convNodeIdxStack[len(convNodeIdxStack)-1]
+		if t.nodes[convIdx].Flags&rightLeaf == 0 {
+			origIdx := origTree.Nodes[origNodeIdxStack[len(origNodeIdxStack)-1]].CRight
+			if !visited[origIdx] {
+				node, err := createNode(&origTree.Nodes[origIdx])
+				if err != nil {
+					return t, err
+				}
+				t.nodes = append(t.nodes, node)
+				convNewIdx := len(t.nodes) - 1
+				convNodeIdxStack = append(convNodeIdxStack, uint32(convNewIdx))
+				origNodeIdxStack = append(origNodeIdxStack, uint32(origIdx))
+				visited[origIdx] = true
+				t.nodes[convIdx].Right = uint32(convNewIdx)
+				continue
+			}
+		}
+		if t.nodes[convIdx].Flags&leftLeaf == 0 {
+			origIdx := origTree.Nodes[origNodeIdxStack[len(origNodeIdxStack)-1]].CLeft
+			if !visited[origIdx] {
+				node, err := createNode(&origTree.Nodes[origIdx])
+				if err != nil {
+					return t, err
+				}
+				t.nodes = append(t.nodes, node)
+				convNewIdx := len(t.nodes) - 1
+				convNodeIdxStack = append(convNodeIdxStack, uint32(convNewIdx))
+				origNodeIdxStack = append(origNodeIdxStack, uint32(origIdx))
+				visited[origIdx] = true
+				t.nodes[convIdx].Left = uint32(convNewIdx)
+				continue
+			}
+		}
+		origNodeIdxStack = origNodeIdxStack[:len(origNodeIdxStack)-1]
+		convNodeIdxStack = convNodeIdxStack[:len(convNodeIdxStack)-1]
+	}
+	return t, nil
+}
+
+// XGEnsembleFromReader reads  XGBoost model from `reader`
+func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
+	e := &XGEnsemble{}
+
+	// reading header info
+	header, err := xgbin.ReadModelHeader(reader)
+	if err != nil {
+		return nil, err
+	}
+	if header.NameGbm != "gbtree" {
+		return nil, fmt.Errorf("only gbtree is supported (got %s)", header.NameGbm)
+	}
+	if header.Param.NumClass > 1 {
+		return nil, fmt.Errorf("only one class predictions is supported (got %d)", header.Param.NumClass)
+	}
+	if header.Param.NumFeatures == 0 {
+		return nil, fmt.Errorf("zero number of features")
+	}
+	e.MaxFeatureIdx = header.Param.NumFeatures - 1
+
+	// reading gbtree
+	origModel, err := xgbin.ReadGBTreeModel(reader)
+	if err != nil {
+		return nil, err
+	}
+	if origModel.Param.NumFeature > int32(header.Param.NumFeatures) {
+		return nil, fmt.Errorf(
+			"gbtee number of features %d, but header number of features %d",
+			origModel.Param.NumFeature,
+			header.Param.NumFeatures,
+		)
+	}
+	if origModel.Param.NumOutputGroup != 1 {
+		return nil, fmt.Errorf("support only 1 output group (got %d)", origModel.Param.NumOutputGroup)
+	}
+	if origModel.Param.NumRoots != 1 {
+		return nil, fmt.Errorf("support only trees with 1 root (got %d)", origModel.Param.NumRoots)
+
+	}
+
+	nTrees := origModel.Param.NumTrees
+	if nTrees == 0 {
+		return nil, fmt.Errorf("no trees in model")
+	}
+
+	// reading particular trees
+	e.Trees = make([]LGTree, 0, nTrees)
+	for i := int32(0); i < nTrees; i++ {
+		tree, err := xgTreeFromReader(origModel.Trees[i], header.Param.NumFeatures)
+		if err != nil {
+			return nil, fmt.Errorf("error while reading %d tree: %s", i, err.Error())
+		}
+		e.Trees = append(e.Trees, tree)
+	}
+	return e, nil
+}
