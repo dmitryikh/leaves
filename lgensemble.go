@@ -6,7 +6,7 @@ import (
 
 // LGEnsemble is LightGBM model (ensemble of trees)
 type LGEnsemble struct {
-	Trees         []LGTree
+	Trees         []lgTree
 	MaxFeatureIdx uint32
 }
 

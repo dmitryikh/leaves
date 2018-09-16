@@ -19,8 +19,8 @@ func xgIsLeaf(origNode *xgbin.Node) bool {
 	return origNode.CLeft == -1
 }
 
-func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (LGTree, error) {
-	t := LGTree{}
+func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree, error) {
+	t := lgTree{}
 
 	if origTree.Param.NumFeature > int32(numFeatures) {
 		return t, fmt.Errorf(
@@ -45,7 +45,7 @@ func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (LGTree, er
 	if numNodes == 1 {
 		// special case
 		// we mimic decision rule but left and right childs lead to the same result
-		t.nodes = make([]LGNode, 0, numNodes)
+		t.nodes = make([]lgNode, 0, numNodes)
 		node := numericalNode(0, 0, 0.0, 0)
 		node.Flags |= leftLeaf
 		node.Flags |= rightLeaf
@@ -54,8 +54,8 @@ func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (LGTree, er
 		return t, nil
 	}
 
-	createNode := func(origNode *xgbin.Node) (LGNode, error) {
-		node := LGNode{}
+	createNode := func(origNode *xgbin.Node) (lgNode, error) {
+		node := lgNode{}
 		// count nan as missing value
 		// NOTE: this differs with XGBosst realization: could be a problem
 		missingType := uint8(missingNan)
@@ -88,7 +88,7 @@ func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (LGTree, er
 	origNodeIdxStack := make([]uint32, 0, numNodes)
 	convNodeIdxStack := make([]uint32, 0, numNodes)
 	visited := make([]bool, numNodes)
-	t.nodes = make([]LGNode, 0, numNodes)
+	t.nodes = make([]lgNode, 0, numNodes)
 	node, err := createNode(&origTree.Nodes[0])
 	if err != nil {
 		return t, err
@@ -182,7 +182,7 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
 	}
 
 	// reading particular trees
-	e.Trees = make([]LGTree, 0, nTrees)
+	e.Trees = make([]lgTree, 0, nTrees)
 	for i := int32(0); i < nTrees; i++ {
 		tree, err := xgTreeFromReader(origModel.Trees[i], header.Param.NumFeatures)
 		if err != nil {

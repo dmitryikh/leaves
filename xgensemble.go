@@ -7,7 +7,7 @@ import (
 
 // XGEnsemble is XGBoost model (ensemble of trees)
 type XGEnsemble struct {
-	Trees         []LGTree
+	Trees         []lgTree
 	MaxFeatureIdx uint32
 }
 
