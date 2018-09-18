@@ -179,14 +179,14 @@ func TestLGEnsemble(t *testing.T) {
 
 	// check predictions
 	predictions := make([]float64, denseRows)
-	model.PredictDense(denseValues, denseRows, denseCols, predictions, 0)
+	model.PredictDense(denseValues, denseRows, denseCols, predictions, 0, 0)
 	truePredictions := []float64{0.29462594, 0.39565483, 0.39565483, 0.69580371, 0.69580371, 0.39565483, 0.29462594}
 	if err := almostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
 		t.Fatalf("predictions on dense not correct (all trees): %s", err.Error())
 	}
 
 	// check prediction only on first tree
-	model.PredictDense(denseValues, denseRows, denseCols, predictions, 1)
+	model.PredictDense(denseValues, denseRows, denseCols, predictions, 1, 0)
 	truePredictions = []float64{0.35849878, 0.41213916, 0.41213916, 0.56697267, 0.56697267, 0.41213916, 0.35849878}
 	if err := almostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
 		t.Fatalf("predictions on dense not correct (all trees): %s", err.Error())
