@@ -16,11 +16,13 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
   * Support LightGBM ([repo](https://github.com/Microsoft/LightGBM)) models:
     * reading models from text format
     * supporting numerical & categorical features
+    * supporting configured parallel predictions for batches
     * addition optimizations for categorical features (for example, _one hot_ decision rule)
     * addition optimizations exploiting only prediction usage
   * Support XGBoost ([repo](https://github.com/dmlc/xgboost)) models:
     * reading models from binary format
     * supporting missing values (`nan`)
+    * supporting configured parallel predictions for batches
 
 
 ## Usage examples
@@ -85,6 +87,16 @@ Single thread:
 | LightGBM [MS LTR](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 137 |500 | 1000 | 49ms | 51ms |
 | LightGBM [Higgs](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 28 | 500 | 1000 | 50ms | 50ms |
 | XGBoost Higgs | 28 | 500 | 1000 | 44ms | 50ms |
+
+8 threads:
+
+| Test Case | Features | Trees | Batch size |  C API  | _leaves_ |
+|-----------|----------|-------|------------|---------|----------|
+| LightGBM [MS LTR](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 137 |500 | 1000 | 14ms | 14ms |
+| LightGBM [Higgs](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 28 | 500 | 1000 | 14ms | 14ms |
+| XGBoost Higgs | 28 | 500 | 1000 | ? | 14ms |
+
+? - currenly I'm unable to utilize multithreading form XGBoost predictions by means of python bindings
 
 ## Limitations
 
