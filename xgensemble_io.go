@@ -50,6 +50,7 @@ func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree, er
 		node.Flags |= leftLeaf
 		node.Flags |= rightLeaf
 		node.Left = uint32(len(t.leafValues))
+		node.Right = uint32(len(t.leafValues))
 		t.leafValues = append(t.leafValues, float64(origTree.Nodes[0].Info))
 		return t, nil
 	}

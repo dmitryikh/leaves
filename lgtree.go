@@ -40,6 +40,7 @@ func (t *lgTree) numericalDecision(node *lgNode, fval float64) bool {
 	if ((node.Flags&missingZero > 0) && isZero(fval)) || ((node.Flags&missingNan > 0) && math.IsNaN(fval)) {
 		return node.Flags&defaultLeft > 0
 	}
+	// Note: LightGBM uses `<=`, but XGBoost uses `<`
 	return fval <= node.Threshold
 }
 
