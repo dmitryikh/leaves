@@ -1,27 +1,31 @@
+import argparse
 import logging
 import numpy as np
 from sklearn.datasets import load_svmlight_file
 import timeit
 import xgboost
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--data', help="data filename", type=str, required=True)
+parser.add_argument('-m', '--model', help="model filename", type=str, required=True)
+parser.add_argument('-t', '--true', help="filename with true predictions", type=str, required=True)
+parser.add_argument('-j', help="number of threads", type=int, default=1)
+params = parser.parse_args()
+
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
-data_filename = '../testdata/higgs_1000examples_test.libsvm'
-model_filename ='../testdata/xghiggs.model'
-true_pred_filename ='../testdata/xghiggs_1000examples_true_predictions.txt'
-
-logging.info(f'start loading test data from {data_filename}')
-X, _ = load_svmlight_file(data_filename, zero_based=True)
+logging.info(f'start loading test data from {params.data}')
+X, _ = load_svmlight_file(params.data, zero_based=True)
 X = xgboost.DMatrix(X)
 logging.info(f'load test data: {X.num_row()} x {X.num_col()}')
 
-ytrue = np.genfromtxt(true_pred_filename)
-logging.info(f'load true predictions from {true_pred_filename}')
+ytrue = np.genfromtxt(params.true)
+logging.info(f'load true predictions from {params.true}')
 
-logging.info(f'start loading model from {model_filename}')
+logging.info(f'start loading model from {params.model}')
 # NOTE: it seems like I don't have control on number of threads using in predictions
 # set OMP_NUM_THREADS also doesn't have any effect
-xg= xgboost.Booster(model_file=model_filename, params={'nthread': 1})
+xg= xgboost.Booster(model_file=params.model, params={'nthread': params.j})
 logging.info('load model')
 
 logging.info('compare predictions')
