@@ -88,7 +88,7 @@ Single thread:
 | LightGBM [Higgs](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 28 | 500 | 1000 | 50ms | 50ms |
 | XGBoost Higgs | 28 | 500 | 1000 | 44ms | 50ms |
 
-8 threads:
+4 threads:
 
 | Test Case | Features | Trees | Batch size |  C API  | _leaves_ |
 |-----------|----------|-------|------------|---------|----------|
