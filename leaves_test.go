@@ -29,12 +29,7 @@ func InnerTestLGMSLTR(t *testing.T, nThreads int) {
 
 	// loading model
 	path = filepath.Join("testdata", "lgmsltr.model")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	model, err := LGEnsembleFromReader(bufReader)
+	model, err := LGEnsembleFromFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,12 +79,7 @@ func InnerTestLGHiggs(t *testing.T, nThreads int) {
 
 	// loading model
 	path = filepath.Join("testdata", "lghiggs.model")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	model, err := LGEnsembleFromReader(bufReader)
+	model, err := LGEnsembleFromFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,12 +147,7 @@ func InnerTestXGHiggs(t *testing.T, nThreads int, dense bool) {
 
 	// loading model
 	path = filepath.Join("testdata", "xghiggs.model")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	model, err := XGEnsembleFromReader(bufReader)
+	model, err := XGEnsembleFromFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,12 +199,7 @@ func InnerBenchmarkLGMSLTR(b *testing.B, nThreads int) {
 
 	// loading model
 	path = filepath.Join("testdata", "lgmsltr.model")
-	reader, err = os.Open(path)
-	if err != nil {
-		b.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	model, err := LGEnsembleFromReader(bufReader)
+	model, err := LGEnsembleFromFile(path)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -275,12 +255,7 @@ func InnerBenchmarkLGHiggs(b *testing.B, nThreads int, dense bool) {
 
 	// loading model
 	path = filepath.Join("testdata", "lghiggs.model")
-	reader, err = os.Open(path)
-	if err != nil {
-		b.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	model, err := LGEnsembleFromReader(bufReader)
+	model, err := LGEnsembleFromFile(path)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -321,13 +296,7 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 
 	// loading model
 	path = filepath.Join("testdata", "xgagaricus.model")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bufReader = bufio.NewReader(reader)
-
-	model, err := XGEnsembleFromReader(bufReader)
+	model, err := XGEnsembleFromFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,12 +369,7 @@ func InnerBenchmarkXGHiggs(b *testing.B, nThreads int, dense bool) {
 
 	// loading model
 	path = filepath.Join("testdata", "xghiggs.model")
-	reader, err = os.Open(path)
-	if err != nil {
-		b.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	model, err := XGEnsembleFromReader(bufReader)
+	model, err := XGEnsembleFromFile(path)
 	if err != nil {
 		b.Fatal(err)
 	}
