@@ -39,36 +39,26 @@ Minimal example:
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 
 	"github.com/dmitryikh/leaves"
 )
 
 func main() {
-	// 1. Open file
-	path := "lightgbm_model.txt"
-	reader, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-	defer reader.Close()
-
-	// 2. Read LightGBM model
-	model, err := leaves.LGEnsembleFromReader(bufio.NewReader(reader))
+	// 1. Read model
+	model, err := leaves.LGEnsembleFromFile("lightgbm_model.txt")
 	if err != nil {
 		panic(err)
 	}
 
-	// 3. Do predictions!
+	// 2. Do predictions!
 	fvals := []float64{1.0, 2.0, 3.0}
 	p := model.Predict(fvals, 0)
 	fmt.Printf("Prediction for %v: %f\n", fvals, p)
 }
 ```
 
-In order to use XGBoost model, just change `leaves.LGEnsembleFromReader`, to `leaves.XGEnsembleFromReader`. For mode usage examples see [leaves_test.go](leaves_test.go).
+In order to use XGBoost model, just change `leaves.LGEnsembleFromFile`, to `leaves.XGEnsembleFromFile`. For mode usage examples see [leaves_test.go](leaves_test.go).
 
 ## Benchmark
 
