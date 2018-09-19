@@ -1,8 +1,9 @@
 package xgbin
 
 import (
-	"bufio"
 	"encoding/binary"
+	"io"
+	"math"
 )
 
 // Most data structures from this packages are mirrors from original XGBoost
@@ -135,8 +136,8 @@ type ModelHeader struct {
 }
 
 // ReadStruct - read arbitrary data structure from binary stream
-func ReadStruct(reader *bufio.Reader, dst interface{}) error {
-	err := binary.Read(reader, binary.LittleEndian, dst)
+func ReadStruct(r io.Reader, dst interface{}) error {
+	err := binary.Read(r, binary.LittleEndian, dst)
 	if err != nil {
 		return err
 	}
@@ -145,17 +146,24 @@ func ReadStruct(reader *bufio.Reader, dst interface{}) error {
 
 // ReadString - read ascii string from binary stream
 // from dmlc-core/include/dmlc/serializer.h
-func ReadString(reader *bufio.Reader) (string, error) {
-	var size uint64
-	err := binary.Read(reader, binary.LittleEndian, &size)
+func ReadString(r io.Reader) (string, error) {
+	var (
+		size uint64
+		buf  [8]byte
+	)
+
+	_, err := io.ReadFull(r, buf[:])
 	if err != nil {
 		return "", err
 	}
+
+	size = binary.LittleEndian.Uint64(buf[:])
 	if size == 0 {
 		return "", nil
 	}
+
 	bytes := make([]byte, size)
-	err = binary.Read(reader, binary.LittleEndian, &bytes)
+	_, err = io.ReadFull(r, bytes)
 	if err != nil {
 		return "", err
 	}
@@ -164,57 +172,76 @@ func ReadString(reader *bufio.Reader) (string, error) {
 
 // ReadFloat32Slice - read vector of floats from binary stream
 // from dmlc-core/include/dmlc/serializer.h
-func ReadFloat32Slice(reader *bufio.Reader) ([]float32, error) {
-	var size uint64
-	err := binary.Read(reader, binary.LittleEndian, &size)
+func ReadFloat32Slice(r io.Reader) ([]float32, error) {
+	var (
+		size uint64
+		buf  [8]byte
+	)
+
+	_, err := io.ReadFull(r, buf[:])
 	if err != nil {
 		return nil, err
 	}
+
+	size = binary.LittleEndian.Uint64(buf[:])
 	if size == 0 {
 		return nil, nil
 	}
 	vec := make([]float32, size)
-	err = binary.Read(reader, binary.LittleEndian, &vec)
-	if err != nil {
-		return nil, err
+	for i := uint64(0); i < size; i++ {
+		_, err = io.ReadFull(r, buf[:4])
+		if err != nil {
+			return nil, err
+		}
+		vec[i] = math.Float32frombits(binary.LittleEndian.Uint32(buf[:4]))
 	}
 	return vec, nil
 }
 
 // ReadInt32Slice - read vector of int from binary stream
 // from dmlc-core/include/dmlc/serializer.h
-func ReadInt32Slice(reader *bufio.Reader) ([]int32, error) {
-	var size uint64
-	err := binary.Read(reader, binary.LittleEndian, &size)
+func ReadInt32Slice(r io.Reader) ([]int32, error) {
+	var (
+		size uint64
+		buf  [8]byte
+	)
+
+	_, err := io.ReadFull(r, buf[:])
 	if err != nil {
 		return nil, err
 	}
+
+	size = binary.LittleEndian.Uint64(buf[:])
 	if size == 0 {
 		return nil, nil
 	}
+
 	vec := make([]int32, size)
-	err = binary.Read(reader, binary.LittleEndian, &vec)
-	if err != nil {
-		return nil, err
+	for i := uint64(0); i < size; i++ {
+		_, err = io.ReadFull(r, buf[:4])
+		if err != nil {
+			return nil, err
+		}
+		vec[i] = int32(binary.LittleEndian.Uint32(buf[:4]))
 	}
 	return vec, nil
 }
 
 // ReadModelHeader reads header info from binary model file
-func ReadModelHeader(reader *bufio.Reader) (*ModelHeader, error) {
+func ReadModelHeader(r io.Reader) (*ModelHeader, error) {
 	modelHeader := &ModelHeader{}
-	err := ReadStruct(reader, &modelHeader.Param)
+	err := ReadStruct(r, &modelHeader.Param)
 	if err != nil {
 		return nil, err
 	}
 
-	nameObj, err := ReadString(reader)
+	nameObj, err := ReadString(r)
 	if err != nil {
 		return nil, err
 	}
 	modelHeader.NameObj = nameObj
 
-	nameGbm, err := ReadString(reader)
+	nameGbm, err := ReadString(r)
 	if err != nil {
 		return nil, err
 	}
@@ -223,15 +250,15 @@ func ReadModelHeader(reader *bufio.Reader) (*ModelHeader, error) {
 }
 
 // ReadGBTreeModel reads gbtree model from binary model file
-func ReadGBTreeModel(reader *bufio.Reader) (*GBTreeModel, error) {
+func ReadGBTreeModel(r io.Reader) (*GBTreeModel, error) {
 	gBTreeModel := &GBTreeModel{}
-	err := ReadStruct(reader, &gBTreeModel.Param)
+	err := ReadStruct(r, &gBTreeModel.Param)
 	if err != nil {
 		return nil, err
 	}
 
 	for i := int32(0); i < gBTreeModel.Param.NumTrees; i++ {
-		tree, err := ReadTreeModel(reader)
+		tree, err := ReadTreeModel(r)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +267,7 @@ func ReadGBTreeModel(reader *bufio.Reader) (*GBTreeModel, error) {
 	if gBTreeModel.Param.NumTrees > 0 {
 		// some information indicator of the tree, reserved
 		// std::vector<int> tree_info;
-		_, err := ReadInt32Slice(reader)
+		_, err := ReadInt32Slice(r)
 		if err != nil {
 			return nil, err
 		}
@@ -250,9 +277,9 @@ func ReadGBTreeModel(reader *bufio.Reader) (*GBTreeModel, error) {
 }
 
 // ReadTreeModel reads particular tree data from binary model file
-func ReadTreeModel(reader *bufio.Reader) (*TreeModel, error) {
+func ReadTreeModel(r io.Reader) (*TreeModel, error) {
 	treeModel := &TreeModel{}
-	err := ReadStruct(reader, &treeModel.Param)
+	err := ReadStruct(r, &treeModel.Param)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +287,7 @@ func ReadTreeModel(reader *bufio.Reader) (*TreeModel, error) {
 	treeModel.Stats = make([]RTreeNodeStat, 0, treeModel.Param.NumNodes)
 	for i := int32(0); i < treeModel.Param.NumNodes; i++ {
 		node := Node{}
-		err := ReadStruct(reader, &node)
+		err := ReadStruct(r, &node)
 		if err != nil {
 			return nil, err
 		}
@@ -268,7 +295,7 @@ func ReadTreeModel(reader *bufio.Reader) (*TreeModel, error) {
 	}
 	for i := int32(0); i < treeModel.Param.NumNodes; i++ {
 		stat := RTreeNodeStat{}
-		err := ReadStruct(reader, &stat)
+		err := ReadStruct(r, &stat)
 		if err != nil {
 			return nil, err
 		}
@@ -277,7 +304,7 @@ func ReadTreeModel(reader *bufio.Reader) (*TreeModel, error) {
 	if treeModel.Param.SizeLeafVector > 0 {
 		// leaf vector, that is used to store additional information
 		// std::vector<bst_float> leaf_vector_;
-		_, err := ReadFloat32Slice(reader)
+		_, err := ReadFloat32Slice(r)
 		if err != nil {
 			return nil, err
 		}
