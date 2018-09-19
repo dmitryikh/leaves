@@ -3,6 +3,7 @@ package leaves
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -247,4 +248,15 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 		e.Trees = append(e.Trees, tree)
 	}
 	return e, nil
+}
+
+// LGEnsembleFromFile reads LightGBM model from binary file
+func LGEnsembleFromFile(filename string) (*LGEnsemble, error) {
+	reader, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	bufReader := bufio.NewReader(reader)
+	return LGEnsembleFromReader(bufReader)
 }

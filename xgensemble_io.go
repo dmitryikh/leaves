@@ -3,6 +3,7 @@ package leaves
 import (
 	"bufio"
 	"fmt"
+	"os"
 
 	"github.com/dmitryikh/leaves/internal/xgbin"
 )
@@ -192,4 +193,15 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
 		e.Trees = append(e.Trees, tree)
 	}
 	return e, nil
+}
+
+// XGEnsembleFromFile reads XGBoost model from binary file
+func XGEnsembleFromFile(filename string) (*XGEnsemble, error) {
+	reader, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	bufReader := bufio.NewReader(reader)
+	return XGEnsembleFromReader(bufReader)
 }

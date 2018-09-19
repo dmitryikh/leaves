@@ -151,13 +151,7 @@ func TestLGTreeLeaves3(t *testing.T) {
 
 func TestLGEnsemble(t *testing.T) {
 	path := filepath.Join("testdata", "model_simple.txt")
-	reader, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bufReader := bufio.NewReader(reader)
-
-	model, err := LGEnsembleFromReader(bufReader)
+	model, err := LGEnsembleFromFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
