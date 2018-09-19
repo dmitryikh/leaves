@@ -7,9 +7,6 @@ import (
 	"sync"
 )
 
-// BatchSize for parallel task
-const BatchSize = 16
-
 // LGEnsemble is LightGBM model (ensemble of trees)
 type LGEnsemble struct {
 	Trees         []lgTree
