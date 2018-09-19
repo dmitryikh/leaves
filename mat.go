@@ -7,15 +7,15 @@ import (
 // DenseMat is dense matrix data structure
 type DenseMat struct {
 	Values []float64
-	Cols   uint32
-	Rows   uint32
+	Cols   int
+	Rows   int
 }
 
 // DenseMatFromArray converts arrays of `values` to DenseMat using shape
 // information `rows` and `cols`
-func DenseMatFromArray(values []float64, rows uint32, cols uint32) (DenseMat, error) {
+func DenseMatFromArray(values []float64, rows int, cols int) (DenseMat, error) {
 	mat := DenseMat{}
-	if uint32(len(values)) != cols*rows {
+	if len(values) != cols*rows {
 		return mat, fmt.Errorf("wrong dimensions")
 	}
 	mat.Values = append(mat.Values, values...)
@@ -26,36 +26,36 @@ func DenseMatFromArray(values []float64, rows uint32, cols uint32) (DenseMat, er
 
 // CSRMat is Compressed Sparse Row matrix data structure
 type CSRMat struct {
-	RowHeaders []uint32
-	ColIndexes []uint32
+	RowHeaders []int
+	ColIndexes []int
 	Values     []float64
 }
 
 // Rows returns number of rows in the matrix
-func (m *CSRMat) Rows() uint32 {
+func (m *CSRMat) Rows() int {
 	if len(m.RowHeaders) == 0 {
 		return 0
 	}
-	return uint32(len(m.RowHeaders)) - 1
+	return len(m.RowHeaders) - 1
 }
 
 // CSRMatFromArray converts arrays of `values` to CSRMat using shape information
 // `rows` and `cols`. See also DenseMatFromArray to store dense data in matrix
-func CSRMatFromArray(values []float64, rows uint32, cols uint32) (CSRMat, error) {
+func CSRMatFromArray(values []float64, rows int, cols int) (CSRMat, error) {
 	mat := CSRMat{}
-	if uint32(len(values)) != cols*rows {
+	if len(values) != cols*rows {
 		return mat, fmt.Errorf("wrong dimensions")
 	}
 	mat.Values = append(mat.Values, values...)
-	mat.ColIndexes = make([]uint32, 0, len(values))
-	mat.RowHeaders = make([]uint32, 0, rows+1)
+	mat.ColIndexes = make([]int, 0, len(values))
+	mat.RowHeaders = make([]int, 0, rows+1)
 
-	for i := uint32(0); i < rows; i++ {
-		mat.RowHeaders = append(mat.RowHeaders, uint32(len(mat.ColIndexes)))
-		for j := uint32(0); j < cols; j++ {
+	for i := 0; i < rows; i++ {
+		mat.RowHeaders = append(mat.RowHeaders, len(mat.ColIndexes))
+		for j := 0; j < cols; j++ {
 			mat.ColIndexes = append(mat.ColIndexes, j)
 		}
 	}
-	mat.RowHeaders = append(mat.RowHeaders, uint32(len(mat.ColIndexes)))
+	mat.RowHeaders = append(mat.RowHeaders, len(mat.ColIndexes))
 	return mat, nil
 }

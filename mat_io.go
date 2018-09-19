@@ -11,9 +11,9 @@ import (
 // DenseMatFromLibsvm reads dense matrix from libsvm format from `reader`
 // stream. If `limit` > 0, reads only first limit `rows`. First colums is label,
 // and usually you should set `skipFirstColumn` = true
-func DenseMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool) (DenseMat, error) {
+func DenseMatFromLibsvm(reader *bufio.Reader, limit int, skipFirstColumn bool) (DenseMat, error) {
 	mat := DenseMat{}
-	startIndex := uint32(0)
+	startIndex := 0
 	if skipFirstColumn {
 		startIndex = 1
 	}
@@ -31,8 +31,8 @@ func DenseMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool
 			return mat, fmt.Errorf("too few columns")
 		}
 
-		var column uint32
-		for col := startIndex; col < uint32(len(tokens)); col++ {
+		var column int
+		for col := startIndex; col < len(tokens); col++ {
 			if len(tokens[col]) == 0 {
 				break
 			}
@@ -41,7 +41,7 @@ func DenseMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool
 				return mat, fmt.Errorf("can't parse %s", tokens[col])
 			}
 			columnUint64, err := strconv.ParseUint(pair[0], 10, 32)
-			column = uint32(columnUint64)
+			column = int(columnUint64)
 			if err != nil {
 				return mat, fmt.Errorf("can't convert to float %s: %s", pair[0], err.Error())
 			}
@@ -71,13 +71,13 @@ func DenseMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool
 // CSRMatFromLibsvm reads CSR (Compressed Sparse Row) matrix from libsvm format
 // from `reader` stream. If `limit` > 0, reads only first limit `rows`. First
 // colums is label, and usually you should set `skipFirstColumn` = true
-func CSRMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool) (CSRMat, error) {
+func CSRMatFromLibsvm(reader *bufio.Reader, limit int, skipFirstColumn bool) (CSRMat, error) {
 	mat := CSRMat{}
-	startIndex := uint32(0)
+	startIndex := 0
 	if skipFirstColumn {
 		startIndex = 1
 	}
-	rows := uint32(0)
+	rows := 0
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil && err != io.EOF {
@@ -92,9 +92,9 @@ func CSRMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool) 
 			return mat, fmt.Errorf("too few columns")
 		}
 
-		mat.RowHeaders = append(mat.RowHeaders, uint32(len(mat.Values)))
-		var column uint32
-		for col := startIndex; col < uint32(len(tokens)); col++ {
+		mat.RowHeaders = append(mat.RowHeaders, len(mat.Values))
+		var column int
+		for col := startIndex; col < len(tokens); col++ {
 			if len(tokens[col]) == 0 {
 				break
 			}
@@ -103,7 +103,7 @@ func CSRMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool) 
 				return mat, fmt.Errorf("can't parse %s", tokens[col])
 			}
 			columnUint64, err := strconv.ParseUint(pair[0], 10, 32)
-			column = uint32(columnUint64)
+			column = int(columnUint64)
 			if err != nil {
 				return mat, fmt.Errorf("can't convert to float %s: %s", pair[0], err.Error())
 			}
@@ -120,7 +120,7 @@ func CSRMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool) 
 			break
 		}
 	}
-	mat.RowHeaders = append(mat.RowHeaders, uint32(len(mat.Values)))
+	mat.RowHeaders = append(mat.RowHeaders, len(mat.Values))
 	return mat, nil
 }
 
@@ -129,13 +129,13 @@ func CSRMatFromLibsvm(reader *bufio.Reader, limit uint32, skipFirstColumn bool) 
 // is label, and usually you should set `skipFirstColumn` = true. If value is
 // absent `defValue` will be used instead
 func DenseMatFromCsv(reader *bufio.Reader,
-	limit uint32,
+	limit int,
 	skipFirstColumn bool,
 	delimiter string,
 	defValue float64) (DenseMat, error) {
 
 	mat := DenseMat{}
-	startIndex := uint32(0)
+	startIndex := 0
 	if skipFirstColumn {
 		startIndex = 1
 	}
@@ -150,8 +150,8 @@ func DenseMatFromCsv(reader *bufio.Reader,
 		}
 		tokens := strings.Split(line, delimiter)
 
-		var column uint32
-		for col := startIndex; col < uint32(len(tokens)); col++ {
+		var column int
+		for col := startIndex; col < len(tokens); col++ {
 			var value float64
 			if len(tokens[col]) == 0 {
 				value = defValue

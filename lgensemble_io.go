@@ -226,7 +226,7 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 	if err != nil {
 		return nil, err
 	}
-	e.MaxFeatureIdx = uint32(maxFeatureIdx)
+	e.MaxFeatureIdx = maxFeatureIdx
 
 	treeSizesStr, isFound := params["tree_sizes"]
 	if !isFound {
