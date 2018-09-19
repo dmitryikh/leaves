@@ -156,7 +156,7 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
 	if header.Param.NumFeatures == 0 {
 		return nil, fmt.Errorf("zero number of features")
 	}
-	e.MaxFeatureIdx = header.Param.NumFeatures - 1
+	e.MaxFeatureIdx = int(header.Param.NumFeatures) - 1
 
 	// reading gbtree
 	origModel, err := xgbin.ReadGBTreeModel(reader)

@@ -84,12 +84,12 @@ func TestCSRMatFromLibsvm(t *testing.T) {
 		t.Errorf("mat.Values incorrect: %s", err.Error())
 	}
 
-	trueRowHeaders := []uint32{0, 3, 5}
+	trueRowHeaders := []int{0, 3, 5}
 	if !reflect.DeepEqual(mat.RowHeaders, trueRowHeaders) {
 		t.Error("mat.RowHeaders are incorrect")
 	}
 
-	trueColIndexes := []uint32{0, 10, 12, 4, 5}
+	trueColIndexes := []int{0, 10, 12, 4, 5}
 	if !reflect.DeepEqual(mat.ColIndexes, trueColIndexes) {
 		t.Error("mat.ColIndexes are incorrect")
 	}
@@ -107,12 +107,12 @@ func TestCSRMatFromLibsvm(t *testing.T) {
 		t.Errorf("mat.Values incorrect: %s", err.Error())
 	}
 
-	trueRowHeaders = []uint32{0, 3}
+	trueRowHeaders = []int{0, 3}
 	if !reflect.DeepEqual(mat.RowHeaders, trueRowHeaders) {
 		t.Error("mat.RowHeaders are incorrect")
 	}
 
-	trueColIndexes = []uint32{0, 10, 12}
+	trueColIndexes = []int{0, 10, 12}
 	if !reflect.DeepEqual(mat.ColIndexes, trueColIndexes) {
 		t.Error("mat.ColIndexes are incorrect")
 	}

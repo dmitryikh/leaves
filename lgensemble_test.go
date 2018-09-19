@@ -168,8 +168,8 @@ func TestLGEnsemble(t *testing.T) {
 		math.NaN(), math.NaN(),
 	}
 
-	denseRows := uint32(7)
-	denseCols := uint32(2)
+	denseRows := 7
+	denseCols := 2
 
 	// check predictions
 	predictions := make([]float64, denseRows)

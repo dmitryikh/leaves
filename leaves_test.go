@@ -111,7 +111,7 @@ func InnerTestHiggs(t *testing.T, model Ensemble, nThreads int, dense bool, true
 	bufReader := bufio.NewReader(reader)
 	var denseMat DenseMat
 	var csrMat CSRMat
-	var nRows uint32
+	var nRows int
 	if dense {
 		denseMat, err = DenseMatFromLibsvm(bufReader, 0, true)
 		if err != nil {
@@ -312,7 +312,7 @@ func InnerBenchmarkHiggs(b *testing.B, model Ensemble, nThreads int, dense bool)
 	bufReader := bufio.NewReader(reader)
 	var denseMat DenseMat
 	var csrMat CSRMat
-	var nRows uint32
+	var nRows int
 	if dense {
 		denseMat, err = DenseMatFromLibsvm(bufReader, 0, true)
 		if err != nil {
