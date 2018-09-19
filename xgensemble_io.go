@@ -19,7 +19,7 @@ func xgIsLeaf(origNode *xgbin.Node) bool {
 	return origNode.CLeft == -1
 }
 
-func xgTreeFromReader(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree, error) {
+func xgTreeFromTreeModel(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree, error) {
 	t := lgTree{}
 
 	if origTree.Param.NumFeature > int32(numFeatures) {
@@ -185,7 +185,7 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
 	// reading particular trees
 	e.Trees = make([]lgTree, 0, nTrees)
 	for i := int32(0); i < nTrees; i++ {
-		tree, err := xgTreeFromReader(origModel.Trees[i], header.Param.NumFeatures)
+		tree, err := xgTreeFromTreeModel(origModel.Trees[i], header.Param.NumFeatures)
 		if err != nil {
 			return nil, fmt.Errorf("error while reading %d tree: %s", i, err.Error())
 		}
