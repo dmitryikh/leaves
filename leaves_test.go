@@ -240,7 +240,7 @@ func BenchmarkLGHiggs_csr_4thread(b *testing.B) {
 	InnerBenchmarkHiggs(b, model, 4, false)
 }
 
-func TestXGAgaricus_1thread(t *testing.T) {
+func TestXGAgaricus(t *testing.T) {
 	InnerTestXGAgaricus(t, 1)
 	InnerTestXGAgaricus(t, 2)
 	InnerTestXGAgaricus(t, 3)
