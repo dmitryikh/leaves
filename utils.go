@@ -189,6 +189,19 @@ func almostEqualFloat64Slices(a, b []float64, threshold float64) error {
 	return nil
 }
 
+func numMismatchedFloat64Slices(a, b []float64, threshold float64) (int, error) {
+	if len(a) != len(b) {
+		return 0, fmt.Errorf("different sizes: len(a) = %d, len(b) = %d", len(a), len(b))
+	}
+	count := 0
+	for i := range a {
+		if math.Abs(a[i]-b[i]) > threshold {
+			count++
+		}
+	}
+	return count, nil
+}
+
 // Sigmoid applies sigmoid transformation to value
 func Sigmoid(x float64) float64 {
 	return 1.0 / (1.0 + math.Exp(-x))
