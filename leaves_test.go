@@ -146,7 +146,29 @@ func InnerTestHiggs(t *testing.T, model Ensemble, nThreads int, dense bool, true
 	}
 	// compare results
 	if err := almostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
-		t.Fatalf("different predictions: %s", err.Error())
+		t.Errorf("different predictions: %s", err.Error())
+	}
+
+	if dense {
+		// check single prediction
+		singleIdx := 100
+		fvals := denseMat.Values[singleIdx*denseMat.Cols : (singleIdx+1)*denseMat.Cols]
+		prediction := model.PredictSingle(fvals, 0)
+		if err := almostEqualFloat64Slices([]float64{truePredictions.Values[singleIdx]}, []float64{prediction}, tolerance); err != nil {
+			t.Errorf("different PredictSingle prediction: %s", err.Error())
+		}
+
+		// check Predict
+		singleIdx = 200
+		fvals = denseMat.Values[singleIdx*denseMat.Cols : (singleIdx+1)*denseMat.Cols]
+		predictions := make([]float64, 1)
+		err := model.Predict(fvals, 0, predictions)
+		if err != nil {
+			t.Errorf("error while call model.Predict: %s", err.Error())
+		}
+		if err := almostEqualFloat64Slices([]float64{truePredictions.Values[singleIdx]}, predictions, tolerance); err != nil {
+			t.Errorf("different Predict prediction: %s", err.Error())
+		}
 	}
 }
 
