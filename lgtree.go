@@ -86,7 +86,7 @@ func (t *lgTree) predict(fvals []float64) float64 {
 			if node.Flags&rightLeaf > 0 {
 				return t.leafValues[node.Right]
 			}
-			idx = node.Right
+			idx++
 		}
 	}
 }
