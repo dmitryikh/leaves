@@ -95,7 +95,8 @@ Single thread:
     * no support transformations functions (sigmoid, lambdarank, etc). Output scores is _raw scores_
   * XGBoost models:
     * no support transformations functions. Output scores is _raw scores_
-	* support only `gbtree` models (most common)
+    * support only `gbtree` models (most common)
+    * could be divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
 
 ## Contacts
 
