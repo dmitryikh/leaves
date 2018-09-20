@@ -70,3 +70,15 @@
     cp xgagaricus.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp ../data/agaricus.txt.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/agaricus_test.libsvm
   ```
+
+  ## Multiclass classification dataset for LightGBM model
+  1. clone https://github.com/Microsoft/LightGBM
+  2. cd to examples/multiclass_classification
+  3. run
+  ```sh
+  lightgbm boosting_type=gbdt objective=multiclass num_class=5 max_bin=255 data=multiclass.train num_trees=10 learning_rate=0.05 num_leaves=31 output_model=lgmulticlass.model
+  lightgbm input_model=lgmulticlass.model data=multiclass.test task=predict output_result=lgmulticlass_true_predictions.txt predict_raw_score=true
+  cp multiclass.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/multiclass_test.tsv
+  cp lgmulticlass.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+  cp lgmulticlass_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+  ```
