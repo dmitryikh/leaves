@@ -16,13 +16,14 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
   * Support LightGBM ([repo](https://github.com/Microsoft/LightGBM)) models:
     * reading models from text format
     * supporting numerical & categorical features
-    * supporting configured parallel predictions for batches
+    * supporting parallel predictions for batches
+    * supporting multiclass predictions
     * addition optimizations for categorical features (for example, _one hot_ decision rule)
     * addition optimizations exploiting only prediction usage
   * Support XGBoost ([repo](https://github.com/dmlc/xgboost)) models:
     * reading models from binary format
     * supporting missing values (`nan`)
-    * supporting configured parallel predictions for batches
+    * supporting parallel predictions for batches
 
 
 ## Usage examples
@@ -53,7 +54,7 @@ func main() {
 
 	// 2. Do predictions!
 	fvals := []float64{1.0, 2.0, 3.0}
-	p := model.Predict(fvals, 0)
+	p := model.PredictSingle(fvals, 0)
 	fmt.Printf("Prediction for %v: %f\n", fvals, p)
 }
 ```
