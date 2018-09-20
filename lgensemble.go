@@ -11,32 +11,78 @@ import (
 type LGEnsemble struct {
 	Trees         []lgTree
 	MaxFeatureIdx int
+	nClasses      int
 }
 
-// NTrees returns number of trees in ensemble
+// NTrees returns number of trees in ensemble (per class)
 func (e *LGEnsemble) NTrees() int {
-	return len(e.Trees)
+	return len(e.Trees) / e.nClasses
 }
 
-// Predict calculates prediction from ensembles of trees. Only `nTrees` first
-// trees will be used. If `len(fvals)` is not enough function will quietly
-// return 0.0. Note, that result is a raw score (before sigmoid function
-// transformation and etc)
-func (e *LGEnsemble) Predict(fvals []float64, nTrees int) float64 {
+// NClasses returns number of classes to predict
+func (e *LGEnsemble) NClasses() int {
+	return e.nClasses
+}
+
+// PredictSingle calculates prediction for one class ensembles of trees. If
+// ensemble is multiclass, will return quitely 0.0. Only `nTrees` first trees
+// will be used. If `len(fvals)` is not enough function will quietly return 0.0.
+// Note, that result is a raw score (before sigmoid function transformation and
+// etc)
+// NOTE: for multiclass prediction use Predict
+func (e *LGEnsemble) PredictSingle(fvals []float64, nTrees int) float64 {
+	if e.nClasses != 1 {
+		return 0.0
+	}
 	if e.MaxFeatureIdx+1 > len(fvals) {
 		return 0.0
 	}
 	ret := 0.0
-	if nTrees > 0 {
-		nTrees = minInt(nTrees, e.NTrees())
-	} else {
-		nTrees = e.NTrees()
-	}
+	nTrees = e.adjustNTrees(nTrees)
 
 	for i := 0; i < nTrees; i++ {
 		ret += e.Trees[i].predict(fvals)
 	}
 	return ret
+}
+
+// Predict calculates single prediction for one or multiclass ensembles.
+// Only `nTrees` first trees will be used. If `len(fvals)` is not enough
+// function will quietly return 0.0. Note, that result is a raw score (before
+// sigmoid function transformation and etc)
+// NOTE: for single class predictions one can use simplified function PredictSingle
+func (e *LGEnsemble) Predict(fvals []float64, nTrees int, predictions []float64) error {
+	nRows := 1
+	if len(predictions) < e.nClasses*nRows {
+		return fmt.Errorf("predictions slice to short (should be at least %d)", e.nClasses*nRows)
+	}
+	if e.MaxFeatureIdx+1 > len(fvals) {
+		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
+	}
+	nTrees = e.adjustNTrees(nTrees)
+
+	e.predictInner(fvals, nTrees, predictions, 0)
+	return nil
+}
+
+func (e *LGEnsemble) predictInner(fvals []float64, nIterations int, predictions []float64, startIndex int) {
+	for k := 0; k < e.nClasses; k++ {
+		predictions[startIndex+k] = 0.0
+	}
+	for i := 0; i < nIterations; i++ {
+		for k := 0; k < e.nClasses; k++ {
+			predictions[startIndex+k] += e.Trees[i*e.nClasses+k].predict(fvals)
+		}
+	}
+}
+
+func (e *LGEnsemble) adjustNTrees(nTrees int) int {
+	if nTrees > 0 {
+		nTrees = minInt(nTrees, e.NTrees()/e.nClasses)
+	} else {
+		nTrees = e.NTrees()
+	}
+	return nTrees
 }
 
 // PredictCSR calculates predictions from ensembles of trees. `indptr`, `cols`,
@@ -45,12 +91,16 @@ func (e *LGEnsemble) Predict(fvals []float64, nTrees int) float64 {
 // threads that will be utilized (maximum is GO_MAX_PROCS)
 // Note, that result is a raw score (before sigmoid function transformation and etc).
 // Note, `predictions` slice should be properly allocated on call side
-func (e *LGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nTrees int, nThreads int) {
+func (e *LGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nTrees int, nThreads int) error {
 	nRows := len(indptr) - 1
+	if len(predictions) < e.nClasses*nRows {
+		return fmt.Errorf("predictions slice to short (should be at least %d)", e.nClasses*nRows)
+	}
+	nTrees = e.adjustNTrees(nTrees)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		fvals := make([]float64, e.MaxFeatureIdx+1)
 		e.predictCSRInner(indptr, cols, vals, 0, len(indptr)-1, predictions, nTrees, fvals)
-		return
+		return nil
 	}
 	if nThreads > runtime.GOMAXPROCS(0) || nThreads < 1 {
 		nThreads = runtime.GOMAXPROCS(0)
@@ -87,6 +137,7 @@ func (e *LGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predic
 	}
 	close(tasks)
 	wg.Wait()
+	return nil
 }
 
 func (e *LGEnsemble) predictCSRInner(indptr []int, cols []int, vals []float64, startIndex int, endIndex int, predictions []float64, nTrees int, fvals []float64) {
@@ -98,7 +149,7 @@ func (e *LGEnsemble) predictCSRInner(indptr []int, cols []int, vals []float64, s
 				fvals[cols[j]] = vals[j]
 			}
 		}
-		predictions[i] = e.Predict(fvals, nTrees)
+		e.predictInner(fvals, nTrees, predictions, i*e.nClasses)
 		for j := start; j < end; j++ {
 			if cols[j] < len(fvals) {
 				fvals[cols[j]] = 0.0
@@ -115,12 +166,16 @@ func (e *LGEnsemble) predictCSRInner(indptr []int, cols []int, vals []float64, s
 // Note, `predictions` slice should be properly allocated on call side
 func (e *LGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predictions []float64, nTrees int, nThreads int) error {
 	nRows := nrows
+	if len(predictions) < e.nClasses*nRows {
+		return fmt.Errorf("predictions slice to short (should be at least %d)", e.nClasses*nRows)
+	}
 	if ncols == 0 || e.MaxFeatureIdx > ncols-1 {
 		return fmt.Errorf("incorrect number of columns")
 	}
+	nTrees = e.adjustNTrees(nTrees)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		for i := 0; i < nRows; i++ {
-			predictions[i] = e.Predict(vals[i*int(ncols):(i+1)*int(ncols)], nTrees)
+			e.predictInner(vals[i*ncols:(i+1)*ncols], nTrees, predictions, i*e.nClasses)
 		}
 		return nil
 	}
@@ -147,9 +202,8 @@ func (e *LGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predicti
 				if endIndex > nRows {
 					endIndex = nRows
 				}
-				// NOTE: make slices here leads to ~10% drawback of performance
 				for i := startIndex; i < endIndex; i++ {
-					predictions[i] = e.Predict(vals[i*int(ncols):(i+1)*int(ncols)], nTrees)
+					e.predictInner(vals[i*int(ncols):(i+1)*int(ncols)], nTrees, predictions, i*e.nClasses)
 				}
 			}
 		}()

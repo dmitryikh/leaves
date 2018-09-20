@@ -216,12 +216,23 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 	if err := mapValueCompare(params, "version", "v2"); err != nil {
 		return nil, err
 	}
-	if err := mapValueCompare(params, "num_class", "1"); err != nil {
+	nClasses, err := mapValueToInt(params, "num_class")
+	if err != nil {
 		return nil, err
 	}
-	if err := mapValueCompare(params, "num_tree_per_iteration", "1"); err != nil {
+	nTreePerIteration, err := mapValueToInt(params, "num_tree_per_iteration")
+	if err != nil {
 		return nil, err
 	}
+	if nClasses != nTreePerIteration {
+		return nil, fmt.Errorf("meet case when num_class (%d) != num_tree_per_iteration (%d)", nClasses, nTreePerIteration)
+	} else if nClasses < 1 {
+		return nil, fmt.Errorf("num_class (%d) should be > 0", nClasses)
+	} else if nTreePerIteration < 1 {
+		return nil, fmt.Errorf("num_tree_per_iteration (%d) should be > 0", nTreePerIteration)
+	}
+	e.nClasses = nClasses
+
 	maxFeatureIdx, err := mapValueToInt(params, "max_feature_idx")
 	if err != nil {
 		return nil, err
@@ -237,6 +248,8 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 	nTrees := len(treeSizes)
 	if nTrees == 0 {
 		return nil, fmt.Errorf("no trees in file (based on tree_sizes value)")
+	} else if nTrees%e.nClasses != 0 {
+		return nil, fmt.Errorf("wrong number of trees (%d) for number of class (%d)", nTrees, e.nClasses)
 	}
 
 	e.Trees = make([]lgTree, 0, nTrees)
