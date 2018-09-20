@@ -362,3 +362,71 @@ func InnerBenchmarkHiggs(b *testing.B, model Ensemble, nThreads int, dense bool)
 		}
 	}
 }
+
+func TestLGMulticlass(t *testing.T) {
+	InnerTestLGMulticlass(t, 1)
+	InnerTestLGMulticlass(t, 2)
+	InnerTestLGMulticlass(t, 3)
+	InnerTestLGMulticlass(t, 4)
+}
+
+func InnerTestLGMulticlass(t *testing.T, nThreads int) {
+	// loading test data
+	path := filepath.Join("testdata", "multiclass_test.tsv")
+	reader, err := os.Open(path)
+	if err != nil {
+		t.Skipf("Skipping due to absence of %s", path)
+	}
+	bufReader := bufio.NewReader(reader)
+	mat, err := DenseMatFromCsv(bufReader, 0, true, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model
+	path = filepath.Join("testdata", "lgmulticlass.model")
+	model, err := LGEnsembleFromFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if model.NTrees() != 10 {
+		t.Fatalf("expected 10 trees (got %d)", model.NTrees())
+	}
+
+	if model.NClasses() != 5 {
+		t.Fatalf("expected 5 classes (got %d)", model.NClasses())
+	}
+
+	// loading true predictions as DenseMat
+	path = filepath.Join("testdata", "lgmulticlass_true_predictions.txt")
+	reader, err = os.Open(path)
+	if err != nil {
+		t.Skipf("Skipping due to absence of %s", path)
+	}
+	bufReader = bufio.NewReader(reader)
+	truePredictions, err := DenseMatFromCsv(bufReader, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, mat.Rows*model.nClasses)
+	model.PredictDense(mat.Values, mat.Rows, mat.Cols, predictions, 0, nThreads)
+	// compare results
+	const tolerance = 1e-7
+	if err := almostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+		t.Errorf("different predictions: %s", err.Error())
+	}
+
+	// check Predict
+	singleIdx := 200
+	fvals := mat.Values[singleIdx*mat.Cols : (singleIdx+1)*mat.Cols]
+	predictions = make([]float64, model.NClasses())
+	err = model.Predict(fvals, 0, predictions)
+	if err != nil {
+		t.Errorf("error while call model.Predict: %s", err.Error())
+	}
+	if err := almostEqualFloat64Slices(truePredictions.Values[singleIdx*model.NClasses():(singleIdx+1)*model.NClasses()], predictions, tolerance); err != nil {
+		t.Errorf("different Predict prediction: %s", err.Error())
+	}
+}
