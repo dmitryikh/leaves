@@ -1,4 +1,4 @@
-package leaves
+package util
 
 import (
 	"bufio"
@@ -11,13 +11,13 @@ func TestFirstNonZeroBit(t *testing.T) {
 	const length = 10
 	const size = 32
 	bitset := make([]uint32, length)
-	_, err := firstNonZeroBit(bitset)
+	_, err := FirstNonZeroBit(bitset)
 	if err == nil {
 		t.Error("all zeros bitset should fail")
 	}
 
 	check := func(trueAnswer uint32) {
-		pos, err := firstNonZeroBit(bitset)
+		pos, err := FirstNonZeroBit(bitset)
 		if err != nil {
 			t.Error(err.Error())
 		}
@@ -44,7 +44,7 @@ func TestNumberOfSetBits(t *testing.T) {
 	bitset := make([]uint32, length)
 
 	check := func(trueAnswer uint32) {
-		if numberOfSetBits(bitset) != trueAnswer {
+		if NumberOfSetBits(bitset) != trueAnswer {
 			t.Errorf("%d fail", trueAnswer)
 		}
 	}
@@ -63,7 +63,7 @@ func TestNumberOfSetBits(t *testing.T) {
 }
 
 func TestReadParams(t *testing.T) {
-	path := filepath.Join("testdata", "model_simple.txt")
+	path := filepath.Join("..", "testdata", "model_simple.txt")
 	reader, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestReadParams(t *testing.T) {
 	bufReader := bufio.NewReader(reader)
 
 	// Читаем заголовок файла
-	params, err := readParamsUntilBlank(bufReader)
+	params, err := ReadParamsUntilBlank(bufReader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestReadParams(t *testing.T) {
 	}
 
 	// Читаем первое дерево
-	params, err = readParamsUntilBlank(bufReader)
+	params, err = ReadParamsUntilBlank(bufReader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestReadParams(t *testing.T) {
 	}
 
 	// Читаем второe дерево
-	params, err = readParamsUntilBlank(bufReader)
+	params, err = ReadParamsUntilBlank(bufReader)
 	if err != nil {
 		t.Fatal(err)
 	}

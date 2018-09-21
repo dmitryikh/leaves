@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -18,32 +19,57 @@ type libsvmRowFunc func(records []libsvmRecord) error
 // DenseMatFromLibsvm reads dense matrix from libsvm format from `reader`
 // stream. If `limit` > 0, reads only first limit `rows`. First colums is label,
 // and usually you should set `skipFirstColumn` = true
-func DenseMatFromLibsvm(reader *bufio.Reader, limit int, skipFirstColumn bool) (DenseMat, error) {
-	mat := DenseMat{}
+func DenseMatFromLibsvm(reader *bufio.Reader, limit int, skipFirstColumn bool) (*DenseMat, error) {
+	mat := &DenseMat{}
 	f := func(records []libsvmRecord) error {
-		return recordsToDenseMat(&mat, records)
+		return recordsToDenseMat(mat, records)
 	}
 	err := readFromLibsvm(reader, limit, skipFirstColumn, f)
 	if err != nil {
-		return mat, fmt.Errorf("unable to parse libsmv format to dense matrix: %s", err.Error())
+		return nil, fmt.Errorf("unable to parse libsmv format to dense matrix: %s", err.Error())
 	}
 	return mat, nil
+}
+
+// DenseMatFromLibsvmFile reads dense matrix from libsvm file `filename`.
+// If `limit` > 0, reads only first limit `rows`. First colums is label,
+// and usually you should set `skipFirstColumn` = true
+func DenseMatFromLibsvmFile(filename string, limit int, skipFirstColumn bool) (*DenseMat, error) {
+	reader, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open %s: %s", filename, err.Error())
+	}
+	defer reader.Close()
+	mat, err := DenseMatFromLibsvm(bufio.NewReader(reader), limit, skipFirstColumn)
+	return mat, err
 }
 
 // CSRMatFromLibsvm reads CSR (Compressed Sparse Row) matrix from libsvm format
 // from `reader` stream. If `limit` > 0, reads only first limit `rows`. First
 // colums is label, and usually you should set `skipFirstColumn` = true
-func CSRMatFromLibsvm(reader *bufio.Reader, limit int, skipFirstColumn bool) (CSRMat, error) {
-	mat := CSRMat{}
+func CSRMatFromLibsvm(reader *bufio.Reader, limit int, skipFirstColumn bool) (*CSRMat, error) {
+	mat := &CSRMat{}
 	mat.RowHeaders = append(mat.RowHeaders, 0)
 	f := func(records []libsvmRecord) error {
-		return recordsToCSRMat(&mat, records)
+		return recordsToCSRMat(mat, records)
 	}
 	err := readFromLibsvm(reader, limit, skipFirstColumn, f)
 	if err != nil {
-		return mat, fmt.Errorf("unable to parse libsmv format to sparse matrix: %s", err.Error())
+		return nil, fmt.Errorf("unable to parse libsmv format to sparse matrix: %s", err.Error())
 	}
 	return mat, nil
+}
+
+// CSRMatFromLibsvmFile reads CSR (Compressed Sparse Row) matrix from libsvm file `filename`.
+// If `limit` > 0, reads only first limit `rows`. First
+// colums is label, and usually you should set `skipFirstColumn` = true
+func CSRMatFromLibsvmFile(filename string, limit int, skipFirstColumn bool) (*CSRMat, error) {
+	reader, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open %s: %s", filename, err.Error())
+	}
+	defer reader.Close()
+	return CSRMatFromLibsvm(bufio.NewReader(reader), limit, skipFirstColumn)
 }
 
 // DenseMatFromCsv reads dense matrix from csv format with `delimiter` from
@@ -55,17 +81,35 @@ func DenseMatFromCsv(reader *bufio.Reader,
 	skipFirstColumn bool,
 	delimiter string,
 	defValue float64,
-) (DenseMat, error) {
+) (*DenseMat, error) {
 
-	mat := DenseMat{}
+	mat := &DenseMat{}
 	f := func(records []libsvmRecord) error {
-		return recordsToDenseMat(&mat, records)
+		return recordsToDenseMat(mat, records)
 	}
 	err := readFromCsv(reader, limit, skipFirstColumn, delimiter, defValue, f)
 	if err != nil {
-		return mat, fmt.Errorf("unable to parse csv format to dense matrix: %s", err.Error())
+		return nil, fmt.Errorf("unable to parse csv format to dense matrix: %s", err.Error())
 	}
 	return mat, nil
+}
+
+// DenseMatFromCsvFile reads dense matrix from csv file `filename` with `delimiter`.
+// If `limit` > 0, reads only first limit `rows`. First colums is label, and
+// usually you should set `skipFirstColumn` = true. If value is absent
+// `defValue` will be used instead
+func DenseMatFromCsvFile(filename string,
+	limit int,
+	skipFirstColumn bool,
+	delimiter string,
+	defValue float64,
+) (*DenseMat, error) {
+	reader, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open %s: %s", filename, err.Error())
+	}
+	defer reader.Close()
+	return DenseMatFromCsv(bufio.NewReader(reader), limit, skipFirstColumn, delimiter, defValue)
 }
 
 func recordsToDenseMat(mat *DenseMat, records []libsvmRecord) error {

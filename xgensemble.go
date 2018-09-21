@@ -5,6 +5,8 @@ import (
 	"math"
 	"runtime"
 	"sync"
+
+	"github.com/dmitryikh/leaves/util"
 )
 
 // XGEnsemble is XGBoost model (ensemble of trees)
@@ -29,7 +31,7 @@ func (e *XGEnsemble) PredictSingle(fvals []float64, nTrees int) float64 {
 	}
 	ret := 0.0
 	if nTrees > 0 {
-		nTrees = minInt(nTrees, e.NTrees())
+		nTrees = util.MinInt(nTrees, e.NTrees())
 	} else {
 		nTrees = e.NTrees()
 	}
@@ -51,7 +53,7 @@ func (e *XGEnsemble) Predict(fvals []float64, nTrees int, predictions []float64)
 		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
 	}
 	if nTrees > 0 {
-		nTrees = minInt(nTrees, e.NTrees())
+		nTrees = util.MinInt(nTrees, e.NTrees())
 	} else {
 		nTrees = e.NTrees()
 	}

@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/dmitryikh/leaves/util"
 )
 
 func TestDenseMatFromLibsvm(t *testing.T) {
-	path := filepath.Join("testdata", "densemat.libsvm")
+	path := filepath.Join("..", "testdata", "densemat.libsvm")
 	reader, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -35,7 +37,7 @@ func TestDenseMatFromLibsvm(t *testing.T) {
 		t.Errorf("mat.Rows should be 2 (got %d)", mat.Rows)
 	}
 	trueValues := []float64{19.0, 45.3, 1e-6, 14.0, 0.0, 0.0}
-	if err := almostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
+	if err := util.AlmostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
 		t.Errorf("mat.Values incorrect: %s", err.Error())
 	}
 
@@ -53,13 +55,13 @@ func TestDenseMatFromLibsvm(t *testing.T) {
 		t.Errorf("mat.Rows should be 1 (got %d)", mat.Rows)
 	}
 	trueValues = []float64{19.0, 45.3, 1e-6}
-	if err := almostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
+	if err := util.AlmostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
 		t.Errorf("mat.Values incorrect: %s", err.Error())
 	}
 }
 
 func TestCSRMatFromLibsvm(t *testing.T) {
-	path := filepath.Join("testdata", "csrmat.libsvm")
+	path := filepath.Join("..", "testdata", "csrmat.libsvm")
 	reader, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +82,7 @@ func TestCSRMatFromLibsvm(t *testing.T) {
 	}
 
 	trueValues := []float64{19.0, 45.3, 1e-6, 14.0, 0.0}
-	if err := almostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
+	if err := util.AlmostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
 		t.Errorf("mat.Values incorrect: %s", err.Error())
 	}
 
@@ -103,7 +105,7 @@ func TestCSRMatFromLibsvm(t *testing.T) {
 	}
 
 	trueValues = []float64{19.0, 45.3, 1e-6}
-	if err := almostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
+	if err := util.AlmostEqualFloat64Slices(mat.Values, trueValues, 1e-10); err != nil {
 		t.Errorf("mat.Values incorrect: %s", err.Error())
 	}
 

@@ -5,6 +5,8 @@ import (
 	"math"
 	"runtime"
 	"sync"
+
+	"github.com/dmitryikh/leaves/util"
 )
 
 // LGEnsemble is LightGBM model (ensemble of trees)
@@ -78,7 +80,7 @@ func (e *LGEnsemble) predictInner(fvals []float64, nIterations int, predictions 
 
 func (e *LGEnsemble) adjustNTrees(nTrees int) int {
 	if nTrees > 0 {
-		nTrees = minInt(nTrees, e.NTrees()/e.nClasses)
+		nTrees = util.MinInt(nTrees, e.NTrees()/e.nClasses)
 	} else {
 		nTrees = e.NTrees()
 	}
