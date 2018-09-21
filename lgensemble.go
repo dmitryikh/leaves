@@ -98,6 +98,7 @@ func (e *LGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predic
 	}
 	nTrees = e.adjustNTrees(nTrees)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
+		// single thread calculations
 		fvals := make([]float64, e.MaxFeatureIdx+1)
 		e.predictCSRInner(indptr, cols, vals, 0, len(indptr)-1, predictions, nTrees, fvals)
 		return nil
@@ -117,11 +118,7 @@ func (e *LGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predic
 		go func() {
 			defer wg.Done()
 			fvals := make([]float64, e.MaxFeatureIdx+1)
-			for {
-				startIndex, more := <-tasks
-				if !more {
-					return
-				}
+			for startIndex := range tasks {
 				endIndex := startIndex + BatchSize
 				if endIndex > nRows {
 					endIndex = nRows
@@ -174,6 +171,7 @@ func (e *LGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predicti
 	}
 	nTrees = e.adjustNTrees(nTrees)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
+		// single thread calculations
 		for i := 0; i < nRows; i++ {
 			e.predictInner(vals[i*ncols:(i+1)*ncols], nTrees, predictions, i*e.nClasses)
 		}
@@ -193,11 +191,7 @@ func (e *LGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predicti
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				startIndex, more := <-tasks
-				if !more {
-					return
-				}
+			for startIndex := range tasks {
 				endIndex := startIndex + BatchSize
 				if endIndex > nRows {
 					endIndex = nRows

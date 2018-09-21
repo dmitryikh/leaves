@@ -72,6 +72,7 @@ func (e *XGEnsemble) Predict(fvals []float64, nTrees int, predictions []float64)
 func (e *XGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nTrees int, nThreads int) error {
 	nRows := len(indptr) - 1
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
+		// single thread calculations
 		fvals := make([]float64, e.MaxFeatureIdx+1)
 		for i := range fvals {
 			fvals[i] = math.NaN()
@@ -97,11 +98,7 @@ func (e *XGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predic
 			for i := range fvals {
 				fvals[i] = math.NaN()
 			}
-			for {
-				startIndex, more := <-tasks
-				if !more {
-					return
-				}
+			for startIndex := range tasks {
 				endIndex := startIndex + BatchSize
 				if endIndex > nRows {
 					endIndex = nRows
@@ -170,11 +167,7 @@ func (e *XGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predicti
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				startIndex, more := <-tasks
-				if !more {
-					return
-				}
+			for startIndex := range tasks {
 				endIndex := startIndex + BatchSize
 				if endIndex > nRows {
 					endIndex = nRows
