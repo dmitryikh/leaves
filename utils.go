@@ -23,8 +23,10 @@ func minInt(a, b int) int {
 	return b
 }
 
-func readParamsUntilBlank(reader *bufio.Reader) (map[string]string, error) {
-	params := make(map[string]string)
+type stringParams map[string]string
+
+func readParamsUntilBlank(reader *bufio.Reader) (stringParams, error) {
+	params := make(stringParams)
 	var line string
 	var err error
 	// skip empty
@@ -57,8 +59,8 @@ func readParamsUntilBlank(reader *bufio.Reader) (map[string]string, error) {
 	return params, nil
 }
 
-func mapValueToInt(params map[string]string, key string) (int, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) toInt(key string) (int, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return 0, fmt.Errorf("no %s field", key)
 	}
@@ -70,8 +72,8 @@ func mapValueToInt(params map[string]string, key string) (int, error) {
 	return value, nil
 }
 
-func mapValueCompare(params map[string]string, key string, rhs string) error {
-	valueStr, isFound := params[key]
+func (p *stringParams) compare(key string, rhs string) error {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return fmt.Errorf("no %s field", key)
 	}
@@ -82,16 +84,16 @@ func mapValueCompare(params map[string]string, key string, rhs string) error {
 	return nil
 }
 
-func mapValueToStrSlice(params map[string]string, key string) ([]string, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) toStrSlice(key string) ([]string, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
 	return strings.Split(valueStr, " "), nil
 }
 
-func mapValueToFloat64Slice(params map[string]string, key string) ([]float64, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) toFloat64Slice(key string) ([]float64, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
@@ -107,8 +109,8 @@ func mapValueToFloat64Slice(params map[string]string, key string) ([]float64, er
 	return values, nil
 }
 
-func mapValueToUint32Slice(params map[string]string, key string) ([]uint32, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) toUint32Slice(key string) ([]uint32, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
@@ -124,8 +126,8 @@ func mapValueToUint32Slice(params map[string]string, key string) ([]uint32, erro
 	return values, nil
 }
 
-func mapValueToInt32Slice(params map[string]string, key string) ([]int32, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) toInt32Slice(key string) ([]int32, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
@@ -160,7 +162,6 @@ func firstNonZeroBit(bitset []uint32) (uint32, error) {
 
 // https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
 func numberOfSetBits(bitset []uint32) uint32 {
-
 	numberOfSetBitsInBitsetElement := func(e uint32) uint32 {
 		e = e - ((e >> 1) & 0x55555555)
 		e = (e & 0x33333333) + ((e >> 2) & 0x33333333)

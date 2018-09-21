@@ -28,13 +28,13 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 	if err != nil {
 		return t, err
 	}
-	numCategorical, err := mapValueToInt(params, "num_cat")
+	numCategorical, err := params.toInt("num_cat")
 	if err != nil {
 		return t, err
 	}
 	t.nCategorical = uint32(numCategorical)
 
-	numLeaves, err := mapValueToInt(params, "num_leaves")
+	numLeaves, err := params.toInt("num_leaves")
 	if err != nil {
 		return t, err
 	}
@@ -43,28 +43,28 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 	}
 	numNodes := numLeaves - 1
 
-	leafValues, err := mapValueToFloat64Slice(params, "leaf_value")
+	leafValues, err := params.toFloat64Slice("leaf_value")
 	if err != nil {
 		return t, err
 	}
 	t.leafValues = leafValues
-	leftChilds, err := mapValueToInt32Slice(params, "left_child")
+	leftChilds, err := params.toInt32Slice("left_child")
 	if err != nil {
 		return t, err
 	}
-	rightChilds, err := mapValueToInt32Slice(params, "right_child")
+	rightChilds, err := params.toInt32Slice("right_child")
 	if err != nil {
 		return t, err
 	}
-	decisionTypes, err := mapValueToUint32Slice(params, "decision_type")
+	decisionTypes, err := params.toUint32Slice("decision_type")
 	if err != nil {
 		return t, err
 	}
-	splitFeatures, err := mapValueToUint32Slice(params, "split_feature")
+	splitFeatures, err := params.toUint32Slice("split_feature")
 	if err != nil {
 		return t, err
 	}
-	thresholds, err := mapValueToFloat64Slice(params, "threshold")
+	thresholds, err := params.toFloat64Slice("threshold")
 	if err != nil {
 		return t, err
 	}
@@ -74,11 +74,11 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 	if numCategorical > 0 {
 		// first element set to zero for consistency
 		t.catBoundaries = make([]uint32, 1)
-		catThresholds, err = mapValueToUint32Slice(params, "cat_threshold")
+		catThresholds, err = params.toUint32Slice("cat_threshold")
 		if err != nil {
 			return t, err
 		}
-		catBoundaries, err = mapValueToUint32Slice(params, "cat_boundaries")
+		catBoundaries, err = params.toUint32Slice("cat_boundaries")
 		if err != nil {
 			return t, err
 		}
@@ -213,14 +213,14 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 		return nil, err
 	}
 
-	if err := mapValueCompare(params, "version", "v2"); err != nil {
+	if err := params.compare("version", "v2"); err != nil {
 		return nil, err
 	}
-	nClasses, err := mapValueToInt(params, "num_class")
+	nClasses, err := params.toInt("num_class")
 	if err != nil {
 		return nil, err
 	}
-	nTreePerIteration, err := mapValueToInt(params, "num_tree_per_iteration")
+	nTreePerIteration, err := params.toInt("num_tree_per_iteration")
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 	}
 	e.nClasses = nClasses
 
-	maxFeatureIdx, err := mapValueToInt(params, "max_feature_idx")
+	maxFeatureIdx, err := params.toInt("max_feature_idx")
 	if err != nil {
 		return nil, err
 	}
