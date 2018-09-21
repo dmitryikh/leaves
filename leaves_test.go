@@ -5,7 +5,35 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/dmitryikh/leaves/mat"
+	"github.com/dmitryikh/leaves/util"
 )
+
+func isFileExists(filename string) bool {
+	f, err := os.Open(filename)
+	if err != nil {
+		return false
+	}
+	f.Close()
+	return true
+}
+
+func skipTestIfFileNotExist(t *testing.T, filenames ...string) {
+	for _, filename := range filenames {
+		if !isFileExists(filename) {
+			t.Skipf("Skipping due to absence of  file: %s", filename)
+		}
+	}
+}
+
+func skipBenchmarkIfFileNotExist(t *testing.B, filenames ...string) {
+	for _, filename := range filenames {
+		if !isFileExists(filename) {
+			t.Skipf("Skipping due to absence of  file: %s", filename)
+		}
+	}
+}
 
 func TestLGMSLTR(t *testing.T) {
 	InnerTestLGMSLTR(t, 1)
@@ -16,137 +44,124 @@ func TestLGMSLTR(t *testing.T) {
 
 func InnerTestLGMSLTR(t *testing.T, nThreads int) {
 	// loading test data
-	path := filepath.Join("testdata", "msltr_1000examples_test.libsvm")
-	reader, err := os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader := bufio.NewReader(reader)
-	mat, err := CSRMatFromLibsvm(bufReader, 0, true)
+	testPath := filepath.Join("testdata", "msltr_1000examples_test.libsvm")
+	truePath := filepath.Join("testdata", "lgmsltr_1000examples_true_predictions.txt")
+	modelPath := filepath.Join("testdata", "lgmsltr.model")
+	skipTestIfFileNotExist(t, testPath, truePath, modelPath)
+
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// loading model
-	path = filepath.Join("testdata", "lgmsltr.model")
-	model, err := LGEnsembleFromFile(path)
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// loading true predictions as DenseMat
-	path = filepath.Join("testdata", "lgmsltr_1000examples_true_predictions.txt")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	truePredictions, err := DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, ",", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// do predictions
-	predictions := make([]float64, mat.Rows())
-	model.PredictCSR(mat.RowHeaders, mat.ColIndexes, mat.Values, predictions, 0, nThreads)
+	predictions := make([]float64, csr.Rows())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 
 	// compare results
-	if err := almostEqualFloat64Slices(truePredictions.Values, predictions, 1e-5); err != nil {
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-5); err != nil {
 		t.Fatalf("different predictions: %s", err.Error())
 	}
 }
 
 func TestLGHiggs(t *testing.T) {
-	filename := "lghiggs_1000examples_true_predictions.txt"
-	// loading model
-	path := filepath.Join("testdata", "lghiggs.model")
-	model, err := LGEnsembleFromFile(path)
+	truePath := filepath.Join("testdata", "lghiggs_1000examples_true_predictions.txt")
+	modelPath := filepath.Join("testdata", "lghiggs.model")
+	skipTestIfFileNotExist(t, truePath, modelPath)
+
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
+		t.Fatalf("fail loading model %s: %s", modelPath, err.Error())
 	}
+
 	const tolerance = 1e-12
 
 	// Dense matrix
-	InnerTestHiggs(t, model, 1, true, filename, tolerance)
-	InnerTestHiggs(t, model, 2, true, filename, tolerance)
-	InnerTestHiggs(t, model, 3, true, filename, tolerance)
-	InnerTestHiggs(t, model, 4, true, filename, tolerance)
-
-	InnerTestHiggs(t, model, 1, false, filename, tolerance)
-	InnerTestHiggs(t, model, 2, false, filename, tolerance)
-	InnerTestHiggs(t, model, 3, false, filename, tolerance)
-	InnerTestHiggs(t, model, 4, false, filename, tolerance)
+	InnerTestHiggs(t, model, 1, true, truePath, tolerance)
+	InnerTestHiggs(t, model, 2, true, truePath, tolerance)
+	InnerTestHiggs(t, model, 3, true, truePath, tolerance)
+	InnerTestHiggs(t, model, 4, true, truePath, tolerance)
+	// Sparse matrix
+	InnerTestHiggs(t, model, 1, false, truePath, tolerance)
+	InnerTestHiggs(t, model, 2, false, truePath, tolerance)
+	InnerTestHiggs(t, model, 3, false, truePath, tolerance)
+	InnerTestHiggs(t, model, 4, false, truePath, tolerance)
 }
 
 func TestXGHiggs(t *testing.T) {
-	filename := "xghiggs_1000examples_true_predictions.txt"
+	truePath := filepath.Join("testdata", "xghiggs_1000examples_true_predictions.txt")
+	modelPath := filepath.Join("testdata", "xghiggs.model")
+	skipTestIfFileNotExist(t, truePath, modelPath)
+
 	// loading model
-	path := filepath.Join("testdata", "xghiggs.model")
-	model, err := XGEnsembleFromFile(path)
+	model, err := XGEnsembleFromFile(modelPath)
 	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
+		t.Fatalf("fail loading model %s: %s", modelPath, err.Error())
 	}
+
 	const tolerance = 1e-5
 
 	// Dense matrix
-	InnerTestHiggs(t, model, 1, true, filename, tolerance)
-	InnerTestHiggs(t, model, 2, true, filename, tolerance)
-	InnerTestHiggs(t, model, 3, true, filename, tolerance)
-	InnerTestHiggs(t, model, 4, true, filename, tolerance)
-
-	InnerTestHiggs(t, model, 1, false, filename, tolerance)
-	InnerTestHiggs(t, model, 2, false, filename, tolerance)
-	InnerTestHiggs(t, model, 3, false, filename, tolerance)
-	InnerTestHiggs(t, model, 4, false, filename, tolerance)
+	InnerTestHiggs(t, model, 1, true, truePath, tolerance)
+	InnerTestHiggs(t, model, 2, true, truePath, tolerance)
+	InnerTestHiggs(t, model, 3, true, truePath, tolerance)
+	InnerTestHiggs(t, model, 4, true, truePath, tolerance)
+	// Sparse matrix
+	InnerTestHiggs(t, model, 1, false, truePath, tolerance)
+	InnerTestHiggs(t, model, 2, false, truePath, tolerance)
+	InnerTestHiggs(t, model, 3, false, truePath, tolerance)
+	InnerTestHiggs(t, model, 4, false, truePath, tolerance)
 }
 
-func InnerTestHiggs(t *testing.T, model Ensemble, nThreads int, dense bool, truePredictionsFilename string, tolerance float64) {
+func InnerTestHiggs(t *testing.T, model Ensemble, nThreads int, isDense bool, truePredictionsFilename string, tolerance float64) {
 	// loading test data
-	path := filepath.Join("testdata", "higgs_1000examples_test.libsvm")
-	reader, err := os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader := bufio.NewReader(reader)
-	var denseMat DenseMat
-	var csrMat CSRMat
+	testPath := filepath.Join("testdata", "higgs_1000examples_test.libsvm")
+	skipTestIfFileNotExist(t, testPath)
+
+	var dense *mat.DenseMat
+	var csr *mat.CSRMat
 	var nRows int
-	if dense {
-		denseMat, err = DenseMatFromLibsvm(bufReader, 0, true)
+	var err error
+	if isDense {
+		dense, err = mat.DenseMatFromLibsvmFile(testPath, 0, true)
 		if err != nil {
 			t.Fatal(err)
 		}
-		nRows = denseMat.Rows
+		nRows = dense.Rows
 	} else {
-		csrMat, err = CSRMatFromLibsvm(bufReader, 0, true)
+		csr, err = mat.CSRMatFromLibsvmFile(testPath, 0, true)
 		if err != nil {
 			t.Fatal(err)
 		}
-		nRows = csrMat.Rows()
+		nRows = csr.Rows()
 	}
 
 	// loading true predictions as DenseMat
-	path = filepath.Join("testdata", truePredictionsFilename)
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	truePredictions, err := DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
+	truePredictions, err := mat.DenseMatFromCsvFile(truePredictionsFilename, 0, false, ",", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	predictions := make([]float64, nRows)
-	if dense {
-		model.PredictDense(denseMat.Values, denseMat.Rows, denseMat.Cols, predictions, 0, nThreads)
+	if isDense {
+		model.PredictDense(dense.Values, dense.Rows, dense.Cols, predictions, 0, nThreads)
 	} else {
-		model.PredictCSR(csrMat.RowHeaders, csrMat.ColIndexes, csrMat.Values, predictions, 0, nThreads)
+		model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 	}
 	// compare results. Count number of mismatched values beacase of floating point
 	// comparisons problems: fval < thresholds.
 	// I think this is because float32 format inside of XGBoost Binary format
-	count, err := numMismatchedFloat64Slices(truePredictions.Values, predictions, tolerance)
+	count, err := util.NumMismatchedFloat64Slices(truePredictions.Values, predictions, tolerance)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -155,24 +170,24 @@ func InnerTestHiggs(t *testing.T, model Ensemble, nThreads int, dense bool, true
 		t.Errorf("mismatched more than %d predictions", count)
 	}
 
-	if dense {
+	if isDense {
 		// check single prediction
 		singleIdx := 100
-		fvals := denseMat.Values[singleIdx*denseMat.Cols : (singleIdx+1)*denseMat.Cols]
+		fvals := dense.Values[singleIdx*dense.Cols : (singleIdx+1)*dense.Cols]
 		prediction := model.PredictSingle(fvals, 0)
-		if err := almostEqualFloat64Slices([]float64{truePredictions.Values[singleIdx]}, []float64{prediction}, tolerance); err != nil {
+		if err := util.AlmostEqualFloat64Slices([]float64{truePredictions.Values[singleIdx]}, []float64{prediction}, tolerance); err != nil {
 			t.Errorf("different PredictSingle prediction: %s", err.Error())
 		}
 
 		// check Predict
 		singleIdx = 200
-		fvals = denseMat.Values[singleIdx*denseMat.Cols : (singleIdx+1)*denseMat.Cols]
+		fvals = dense.Values[singleIdx*dense.Cols : (singleIdx+1)*dense.Cols]
 		predictions := make([]float64, 1)
 		err := model.Predict(fvals, 0, predictions)
 		if err != nil {
 			t.Errorf("error while call model.Predict: %s", err.Error())
 		}
-		if err := almostEqualFloat64Slices([]float64{truePredictions.Values[singleIdx]}, predictions, tolerance); err != nil {
+		if err := util.AlmostEqualFloat64Slices([]float64{truePredictions.Values[singleIdx]}, predictions, tolerance); err != nil {
 			t.Errorf("different Predict prediction: %s", err.Error())
 		}
 	}
@@ -188,34 +203,32 @@ func BenchmarkLGMSLTR_csr_4thread(b *testing.B) {
 
 func InnerBenchmarkLGMSLTR(b *testing.B, nThreads int) {
 	// loading test data
-	path := filepath.Join("testdata", "msltr_1000examples_test.libsvm")
-	reader, err := os.Open(path)
-	if err != nil {
-		b.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader := bufio.NewReader(reader)
-	mat, err := CSRMatFromLibsvm(bufReader, 0, true)
+	testPath := filepath.Join("testdata", "msltr_1000examples_test.libsvm")
+	modelPath := filepath.Join("testdata", "lgmsltr.model")
+	skipBenchmarkIfFileNotExist(b, testPath, modelPath)
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	// loading model
-	path = filepath.Join("testdata", "lgmsltr.model")
-	model, err := LGEnsembleFromFile(path)
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	// do benchmark
 	b.ResetTimer()
-	predictions := make([]float64, mat.Rows())
+	predictions := make([]float64, csr.Rows())
 	for i := 0; i < b.N; i++ {
-		model.PredictCSR(mat.RowHeaders, mat.ColIndexes, mat.Values, predictions, 0, nThreads)
+		model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 	}
 }
 
 func BenchmarkLGHiggs_dense_1thread(b *testing.B) {
-	model, err := LGEnsembleFromFile(filepath.Join("testdata", "lghiggs.model"))
+	modelPath := filepath.Join("testdata", "lghiggs.model")
+	skipBenchmarkIfFileNotExist(b, modelPath)
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -223,7 +236,9 @@ func BenchmarkLGHiggs_dense_1thread(b *testing.B) {
 }
 
 func BenchmarkLGHiggs_dense_4thread(b *testing.B) {
-	model, err := LGEnsembleFromFile(filepath.Join("testdata", "lghiggs.model"))
+	modelPath := filepath.Join("testdata", "lghiggs.model")
+	skipBenchmarkIfFileNotExist(b, modelPath)
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -231,7 +246,9 @@ func BenchmarkLGHiggs_dense_4thread(b *testing.B) {
 }
 
 func BenchmarkLGHiggs_csr_1thread(b *testing.B) {
-	model, err := LGEnsembleFromFile(filepath.Join("testdata", "lghiggs.model"))
+	modelPath := filepath.Join("testdata", "lghiggs.model")
+	skipBenchmarkIfFileNotExist(b, modelPath)
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -239,7 +256,9 @@ func BenchmarkLGHiggs_csr_1thread(b *testing.B) {
 }
 
 func BenchmarkLGHiggs_csr_4thread(b *testing.B) {
-	model, err := LGEnsembleFromFile(filepath.Join("testdata", "lghiggs.model"))
+	modelPath := filepath.Join("testdata", "lghiggs.model")
+	skipBenchmarkIfFileNotExist(b, modelPath)
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -261,7 +280,7 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 		t.Skipf("Skipping due to absence of %s", path)
 	}
 	bufReader := bufio.NewReader(reader)
-	mat, err := CSRMatFromLibsvm(bufReader, 0, true)
+	csr, err := mat.CSRMatFromLibsvm(bufReader, 0, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,17 +302,17 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 		t.Skipf("Skipping due to absence of %s", path)
 	}
 	bufReader = bufio.NewReader(reader)
-	truePredictions, err := DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
+	truePredictions, err := mat.DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// do predictions
-	predictions := make([]float64, mat.Rows())
-	model.PredictCSR(mat.RowHeaders, mat.ColIndexes, mat.Values, predictions, 0, nThreads)
-	SigmoidFloat64SliceInplace(predictions)
+	predictions := make([]float64, csr.Rows())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
+	util.SigmoidFloat64SliceInplace(predictions)
 	// compare results
-	if err := almostEqualFloat64Slices(truePredictions.Values, predictions, 1e-7); err != nil {
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-7); err != nil {
 		t.Fatalf("different predictions: %s", err.Error())
 	}
 }
@@ -330,41 +349,38 @@ func BenchmarkXGHiggs_csr_4thread(b *testing.B) {
 	InnerBenchmarkHiggs(b, model, 4, false)
 }
 
-func InnerBenchmarkHiggs(b *testing.B, model Ensemble, nThreads int, dense bool) {
+func InnerBenchmarkHiggs(b *testing.B, model Ensemble, nThreads int, isDense bool) {
 	// loading test data
-	path := filepath.Join("testdata", "higgs_1000examples_test.libsvm")
-	reader, err := os.Open(path)
-	if err != nil {
-		b.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader := bufio.NewReader(reader)
-	var denseMat DenseMat
-	var csrMat CSRMat
+	truePath := filepath.Join("testdata", "higgs_1000examples_test.libsvm")
+	skipBenchmarkIfFileNotExist(b, truePath)
+	var dense *mat.DenseMat
+	var csr *mat.CSRMat
 	var nRows int
-	if dense {
-		denseMat, err = DenseMatFromLibsvm(bufReader, 0, true)
+	var err error
+	if isDense {
+		dense, err = mat.DenseMatFromLibsvmFile(truePath, 0, true)
 		if err != nil {
 			b.Fatal(err)
 		}
-		nRows = denseMat.Rows
+		nRows = dense.Rows
 	} else {
-		csrMat, err = CSRMatFromLibsvm(bufReader, 0, true)
+		csr, err = mat.CSRMatFromLibsvmFile(truePath, 0, true)
 		if err != nil {
 			b.Fatal(err)
 		}
-		nRows = csrMat.Rows()
+		nRows = csr.Rows()
 	}
 
 	// do benchmark
 	b.ResetTimer()
 	predictions := make([]float64, nRows)
-	if dense {
+	if isDense {
 		for i := 0; i < b.N; i++ {
-			model.PredictDense(denseMat.Values, denseMat.Rows, denseMat.Cols, predictions, 0, nThreads)
+			model.PredictDense(dense.Values, dense.Rows, dense.Cols, predictions, 0, nThreads)
 		}
 	} else {
 		for i := 0; i < b.N; i++ {
-			model.PredictCSR(csrMat.RowHeaders, csrMat.ColIndexes, csrMat.Values, predictions, 0, nThreads)
+			model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 		}
 	}
 }
@@ -378,61 +394,51 @@ func TestLGMulticlass(t *testing.T) {
 
 func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	// loading test data
-	path := filepath.Join("testdata", "multiclass_test.tsv")
-	reader, err := os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader := bufio.NewReader(reader)
-	mat, err := DenseMatFromCsv(bufReader, 0, true, "\t", 0.0)
+	testPath := filepath.Join("testdata", "multiclass_test.tsv")
+	modelPath := filepath.Join("testdata", "lgmulticlass.model")
+	truePath := filepath.Join("testdata", "lgmulticlass_true_predictions.txt")
+	skipTestIfFileNotExist(t, testPath, modelPath, truePath)
+	csr, err := mat.DenseMatFromCsvFile(testPath, 0, true, "\t", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// loading model
-	path = filepath.Join("testdata", "lgmulticlass.model")
-	model, err := LGEnsembleFromFile(path)
+	model, err := LGEnsembleFromFile(modelPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if model.NTrees() != 10 {
 		t.Fatalf("expected 10 trees (got %d)", model.NTrees())
 	}
-
 	if model.NClasses() != 5 {
 		t.Fatalf("expected 5 classes (got %d)", model.NClasses())
 	}
 
 	// loading true predictions as DenseMat
-	path = filepath.Join("testdata", "lgmulticlass_true_predictions.txt")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	truePredictions, err := DenseMatFromCsv(bufReader, 0, false, "\t", 0.0)
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// do predictions
-	predictions := make([]float64, mat.Rows*model.nClasses)
-	model.PredictDense(mat.Values, mat.Rows, mat.Cols, predictions, 0, nThreads)
+	predictions := make([]float64, csr.Rows*model.nClasses)
+	model.PredictDense(csr.Values, csr.Rows, csr.Cols, predictions, 0, nThreads)
 	// compare results
 	const tolerance = 1e-7
-	if err := almostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
 		t.Errorf("different predictions: %s", err.Error())
 	}
 
 	// check Predict
 	singleIdx := 200
-	fvals := mat.Values[singleIdx*mat.Cols : (singleIdx+1)*mat.Cols]
+	fvals := csr.Values[singleIdx*csr.Cols : (singleIdx+1)*csr.Cols]
 	predictions = make([]float64, model.NClasses())
 	err = model.Predict(fvals, 0, predictions)
 	if err != nil {
 		t.Errorf("error while call model.Predict: %s", err.Error())
 	}
-	if err := almostEqualFloat64Slices(truePredictions.Values[singleIdx*model.NClasses():(singleIdx+1)*model.NClasses()], predictions, tolerance); err != nil {
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values[singleIdx*model.NClasses():(singleIdx+1)*model.NClasses()], predictions, tolerance); err != nil {
 		t.Errorf("different Predict prediction: %s", err.Error())
 	}
 }

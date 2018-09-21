@@ -1,4 +1,4 @@
-package leaves
+package util
 
 import (
 	"bufio"
@@ -9,22 +9,24 @@ import (
 	"strings"
 )
 
-func findInBitsetUint32(bits uint32, pos uint32) bool {
+func FindInBitsetUint32(bits uint32, pos uint32) bool {
 	if pos >= 32 {
 		return false
 	}
 	return (bits>>pos)&1 > 0
 }
 
-func minInt(a, b int) int {
+func MinInt(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func readParamsUntilBlank(reader *bufio.Reader) (map[string]string, error) {
-	params := make(map[string]string)
+type stringParams map[string]string
+
+func ReadParamsUntilBlank(reader *bufio.Reader) (stringParams, error) {
+	params := make(stringParams)
 	var line string
 	var err error
 	// skip empty
@@ -57,8 +59,8 @@ func readParamsUntilBlank(reader *bufio.Reader) (map[string]string, error) {
 	return params, nil
 }
 
-func mapValueToInt(params map[string]string, key string) (int, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) ToInt(key string) (int, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return 0, fmt.Errorf("no %s field", key)
 	}
@@ -70,8 +72,8 @@ func mapValueToInt(params map[string]string, key string) (int, error) {
 	return value, nil
 }
 
-func mapValueCompare(params map[string]string, key string, rhs string) error {
-	valueStr, isFound := params[key]
+func (p *stringParams) Compare(key string, rhs string) error {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return fmt.Errorf("no %s field", key)
 	}
@@ -82,16 +84,16 @@ func mapValueCompare(params map[string]string, key string, rhs string) error {
 	return nil
 }
 
-func mapValueToStrSlice(params map[string]string, key string) ([]string, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) ToStrSlice(key string) ([]string, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
 	return strings.Split(valueStr, " "), nil
 }
 
-func mapValueToFloat64Slice(params map[string]string, key string) ([]float64, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) ToFloat64Slice(key string) ([]float64, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
@@ -107,8 +109,8 @@ func mapValueToFloat64Slice(params map[string]string, key string) ([]float64, er
 	return values, nil
 }
 
-func mapValueToUint32Slice(params map[string]string, key string) ([]uint32, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) ToUint32Slice(key string) ([]uint32, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
@@ -124,8 +126,8 @@ func mapValueToUint32Slice(params map[string]string, key string) ([]uint32, erro
 	return values, nil
 }
 
-func mapValueToInt32Slice(params map[string]string, key string) ([]int32, error) {
-	valueStr, isFound := params[key]
+func (p *stringParams) ToInt32Slice(key string) ([]int32, error) {
+	valueStr, isFound := (*p)[key]
 	if !isFound {
 		return nil, fmt.Errorf("no %s field", key)
 	}
@@ -147,7 +149,7 @@ var multiplyDeBruijnBitPosition = [...]uint32{
 }
 
 // https://stackoverflow.com/questions/757059/position-of-least-significant-bit-that-is-set
-func firstNonZeroBit(bitset []uint32) (uint32, error) {
+func FirstNonZeroBit(bitset []uint32) (uint32, error) {
 	pos := uint32(0)
 	for _, bitsetElement := range bitset {
 		if bitsetElement > 0 {
@@ -159,8 +161,7 @@ func firstNonZeroBit(bitset []uint32) (uint32, error) {
 }
 
 // https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
-func numberOfSetBits(bitset []uint32) uint32 {
-
+func NumberOfSetBits(bitset []uint32) uint32 {
 	numberOfSetBitsInBitsetElement := func(e uint32) uint32 {
 		e = e - ((e >> 1) & 0x55555555)
 		e = (e & 0x33333333) + ((e >> 2) & 0x33333333)
@@ -173,11 +174,11 @@ func numberOfSetBits(bitset []uint32) uint32 {
 	return count
 }
 
-func almostEqualFloat64(a, b, threshold float64) bool {
+func AlmostEqualFloat64(a, b, threshold float64) bool {
 	return math.Abs(a-b) <= threshold
 }
 
-func almostEqualFloat64Slices(a, b []float64, threshold float64) error {
+func AlmostEqualFloat64Slices(a, b []float64, threshold float64) error {
 	if len(a) != len(b) {
 		return fmt.Errorf("different sizes: len(a) = %d, len(b) = %d", len(a), len(b))
 	}
@@ -189,7 +190,7 @@ func almostEqualFloat64Slices(a, b []float64, threshold float64) error {
 	return nil
 }
 
-func numMismatchedFloat64Slices(a, b []float64, threshold float64) (int, error) {
+func NumMismatchedFloat64Slices(a, b []float64, threshold float64) (int, error) {
 	if len(a) != len(b) {
 		return 0, fmt.Errorf("different sizes: len(a) = %d, len(b) = %d", len(a), len(b))
 	}

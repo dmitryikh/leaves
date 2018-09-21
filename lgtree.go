@@ -2,6 +2,8 @@ package leaves
 
 import (
 	"math"
+
+	"github.com/dmitryikh/leaves/util"
 )
 
 const (
@@ -57,7 +59,7 @@ func (t *lgTree) categoricalDecision(node *lgNode, fval float64) bool {
 	if node.Flags&catOneHot > 0 {
 		return int32(node.Threshold) == ifval
 	} else if node.Flags&catSmall > 0 {
-		return findInBitsetUint32(uint32(node.Threshold), uint32(ifval))
+		return util.FindInBitsetUint32(uint32(node.Threshold), uint32(ifval))
 	}
 	return t.findInBitset(uint32(node.Threshold), uint32(ifval))
 }

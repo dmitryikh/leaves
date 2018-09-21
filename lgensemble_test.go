@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/dmitryikh/leaves/util"
 )
 
 func TestReadLGTree(t *testing.T) {
@@ -17,7 +19,7 @@ func TestReadLGTree(t *testing.T) {
 	bufReader := bufio.NewReader(reader)
 
 	// Read ensemble header (to skip)
-	_, err = readParamsUntilBlank(bufReader)
+	_, err = util.ReadParamsUntilBlank(bufReader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +36,7 @@ func TestReadLGTree(t *testing.T) {
 		t.Fatalf("tree.nCategorical != 1 (got %d)", tree.nCategorical)
 	}
 	trueLeavesValues := []float64{0.56697267424823339, 0.3584987837673016, 0.41213915936587919}
-	if err := almostEqualFloat64Slices(tree.leafValues, trueLeavesValues, 1e-10); err != nil {
+	if err := util.AlmostEqualFloat64Slices(tree.leafValues, trueLeavesValues, 1e-10); err != nil {
 		t.Fatalf("tree.leavesValues incorrect: %s", err.Error())
 	}
 	if tree.nodes[0].Flags&categorical == 0 {
@@ -98,7 +100,7 @@ func TestLGTreeLeaves2(t *testing.T) {
 	fvals := []float64{0.0}
 	check := func(truePred float64) {
 		p := tree.predict(fvals)
-		if !almostEqualFloat64(p, truePred, 1e-3) {
+		if !util.AlmostEqualFloat64(p, truePred, 1e-3) {
 			t.Errorf("expected prediction %f, got %f", truePred, p)
 		}
 	}
@@ -133,7 +135,7 @@ func TestLGTreeLeaves3(t *testing.T) {
 	fvals := []float64{0.0, 0.0}
 	check := func(truePred float64) {
 		p := tree.predict(fvals)
-		if !almostEqualFloat64(p, truePred, 1e-3) {
+		if !util.AlmostEqualFloat64(p, truePred, 1e-3) {
 			t.Errorf("expected prediction %f, got %f", truePred, p)
 		}
 	}
@@ -175,14 +177,14 @@ func TestLGEnsemble(t *testing.T) {
 	predictions := make([]float64, denseRows)
 	model.PredictDense(denseValues, denseRows, denseCols, predictions, 0, 0)
 	truePredictions := []float64{0.29462594, 0.39565483, 0.39565483, 0.69580371, 0.69580371, 0.39565483, 0.29462594}
-	if err := almostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
+	if err := util.AlmostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
 		t.Fatalf("predictions on dense not correct (all trees): %s", err.Error())
 	}
 
 	// check prediction only on first tree
 	model.PredictDense(denseValues, denseRows, denseCols, predictions, 1, 0)
 	truePredictions = []float64{0.35849878, 0.41213916, 0.41213916, 0.56697267, 0.56697267, 0.41213916, 0.35849878}
-	if err := almostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
+	if err := util.AlmostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
 		t.Fatalf("predictions on dense not correct (all trees): %s", err.Error())
 	}
 }
