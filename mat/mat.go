@@ -1,4 +1,8 @@
-package leaves
+/*
+Package mat provides matrix structures and loaders for `leaves` tests.
+`leaves` API doesn't depend on `mat.*`
+*/
+package mat
 
 import (
 	"fmt"
