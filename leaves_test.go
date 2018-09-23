@@ -443,6 +443,15 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	}
 }
 
+func BenchmarkHiggsLoading(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"))
+		if err != nil {
+			b.Skip(err.Error())
+		}
+	}
+}
+
 func TestXGDermatology(t *testing.T) {
 	InnerTestXGDermatology(t, 1)
 	InnerTestXGDermatology(t, 2)
