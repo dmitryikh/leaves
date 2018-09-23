@@ -122,7 +122,7 @@ type GBTreeModel struct {
 	Param GBTreeModelParam
 	Trees []*TreeModel
 	// some information indicator of the tree, reserved
-	// TreeInfo []int32
+	TreeInfo []int32
 }
 
 // ModelHeader contains all input data related to top records of model binary
@@ -240,7 +240,8 @@ func ReadGBTreeModel(reader *bufio.Reader) (*GBTreeModel, error) {
 	if gBTreeModel.Param.NumTrees > 0 {
 		// some information indicator of the tree, reserved
 		// std::vector<int> tree_info;
-		_, err := ReadInt32Slice(reader)
+		gBTreeModel.TreeInfo = make([]int32, gBTreeModel.Param.NumTrees)
+		err = binary.Read(reader, binary.LittleEndian, &gBTreeModel.TreeInfo)
 		if err != nil {
 			return nil, err
 		}

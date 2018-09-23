@@ -13,11 +13,28 @@ import (
 type XGEnsemble struct {
 	Trees         []lgTree
 	MaxFeatureIdx int
+	nClasses      int
+	TreeInfo      []int
+	BaseScore     float64
 }
 
 // NTrees returns number of trees in ensemble
 func (e *XGEnsemble) NTrees() int {
 	return len(e.Trees)
+}
+
+// NClasses returns number of classes to predict
+func (e *XGEnsemble) NClasses() int {
+	return e.nClasses
+}
+
+func (e *XGEnsemble) adjustNTrees(nTrees int) int {
+	if nTrees > 0 {
+		nTrees = util.MinInt(nTrees*e.nClasses, e.NTrees())
+	} else {
+		nTrees = e.NTrees()
+	}
+	return nTrees
 }
 
 // PredictSingle calculates prediction from ensembles of trees. Only `nTrees` first
@@ -26,15 +43,14 @@ func (e *XGEnsemble) NTrees() int {
 // Note, that result is a raw score (before sigmoid function transformation and etc).
 // Note, nan feature values treated as missing values
 func (e *XGEnsemble) PredictSingle(fvals []float64, nTrees int) float64 {
+	if e.nClasses != 1 {
+		return 0.0
+	}
 	if e.MaxFeatureIdx+1 > len(fvals) {
 		return 0.0
 	}
-	ret := 0.0
-	if nTrees > 0 {
-		nTrees = util.MinInt(nTrees, e.NTrees())
-	} else {
-		nTrees = e.NTrees()
-	}
+	ret := e.BaseScore
+	nTrees = e.adjustNTrees(nTrees)
 
 	for i := 0; i < nTrees; i++ {
 		ret += e.Trees[i].predict(fvals)
@@ -42,26 +58,31 @@ func (e *XGEnsemble) PredictSingle(fvals []float64, nTrees int) float64 {
 	return ret
 }
 
-// Predict for multiclass predictions.
-// NOTE: currently XGEnsemble doesn't support multiclass prediction, thus
-// Predict behaves the same as PredictSingle (slightly different signatures)
+func (e *XGEnsemble) predictInner(fvals []float64, nIterations int, predictions []float64, startIndex int) {
+	for k := 0; k < e.nClasses; k++ {
+		predictions[startIndex+k] = e.BaseScore
+		for i := 0; i < nIterations; i++ {
+			if e.TreeInfo[i] == k {
+				predictions[startIndex+k] += e.Trees[i].predict(fvals)
+			}
+		}
+	}
+}
+
+// Predict calculates single prediction for one or multiclass ensembles.
+// Only `nTrees` first trees will be used. Note, that result is a raw score (before
+// sigmoid function transformation and etc)
+// NOTE: for single class predictions one can use simplified function PredictSingle
 func (e *XGEnsemble) Predict(fvals []float64, nTrees int, predictions []float64) error {
 	if len(predictions) < 1 {
-		return fmt.Errorf("predictions slice to short (should be at least %d)", 1)
+		return fmt.Errorf("predictions slice too short (should be at least %d)", 1)
 	}
 	if e.MaxFeatureIdx+1 > len(fvals) {
 		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
 	}
-	if nTrees > 0 {
-		nTrees = util.MinInt(nTrees, e.NTrees())
-	} else {
-		nTrees = e.NTrees()
-	}
 
-	predictions[0] = 0.0
-	for i := 0; i < nTrees; i++ {
-		predictions[0] += e.Trees[i].predict(fvals)
-	}
+	nTrees = e.adjustNTrees(nTrees)
+	e.predictInner(fvals, nTrees, predictions, 0)
 	return nil
 }
 
@@ -73,6 +94,10 @@ func (e *XGEnsemble) Predict(fvals []float64, nTrees int, predictions []float64)
 // Note, `predictions` slice should be properly allocated on call side
 func (e *XGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nTrees int, nThreads int) error {
 	nRows := len(indptr) - 1
+	if len(predictions) < e.nClasses*nRows {
+		return fmt.Errorf("predictions slice to short (should be at least %d)", e.nClasses*nRows)
+	}
+	nTrees = e.adjustNTrees(nTrees)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		// single thread calculations
 		fvals := make([]float64, e.MaxFeatureIdx+1)
@@ -128,7 +153,7 @@ func (e *XGEnsemble) predictCSRInner(indptr []int, cols []int, vals []float64, s
 				fvals[cols[j]] = vals[j]
 			}
 		}
-		predictions[i] = e.PredictSingle(fvals, nTrees)
+		e.predictInner(fvals, nTrees, predictions, i*e.nClasses)
 		for j := start; j < end; j++ {
 			if cols[j] < len(fvals) {
 				fvals[cols[j]] = math.NaN()
@@ -145,13 +170,17 @@ func (e *XGEnsemble) predictCSRInner(indptr []int, cols []int, vals []float64, s
 // Note, `predictions` slice should be properly allocated on call side
 func (e *XGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predictions []float64, nTrees int, nThreads int) error {
 	nRows := nrows
+	if len(predictions) < e.nClasses*nRows {
+		return fmt.Errorf("predictions slice to short (should be at least %d)", e.nClasses*nRows)
+	}
 	if ncols == 0 || e.MaxFeatureIdx > ncols-1 {
 		return fmt.Errorf("incorrect number of columns")
 	}
+	nTrees = e.adjustNTrees(nTrees)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		// single thread calculations
 		for i := 0; i < nRows; i++ {
-			predictions[i] = e.PredictSingle(vals[i*int(ncols):(i+1)*int(ncols)], nTrees)
+			e.predictInner(vals[i*int(ncols):(i+1)*int(ncols)], nTrees, predictions, i*e.nClasses)
 		}
 		return nil
 	}
@@ -175,7 +204,7 @@ func (e *XGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predicti
 					endIndex = nRows
 				}
 				for i := startIndex; i < endIndex; i++ {
-					predictions[i] = e.PredictSingle(vals[i*int(ncols):(i+1)*int(ncols)], nTrees)
+					e.predictInner(vals[i*int(ncols):(i+1)*int(ncols)], nTrees, predictions, i*e.nClasses)
 				}
 			}
 		}()

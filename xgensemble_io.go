@@ -150,13 +150,11 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
 	if header.NameGbm != "gbtree" {
 		return nil, fmt.Errorf("only gbtree is supported (got %s)", header.NameGbm)
 	}
-	if header.Param.NumClass > 1 {
-		return nil, fmt.Errorf("only one class predictions is supported (got %d)", header.Param.NumClass)
-	}
 	if header.Param.NumFeatures == 0 {
 		return nil, fmt.Errorf("zero number of features")
 	}
 	e.MaxFeatureIdx = int(header.Param.NumFeatures) - 1
+	e.BaseScore = float64(header.Param.BaseScore)
 
 	// reading gbtree
 	origModel, err := xgbin.ReadGBTreeModel(reader)
@@ -170,12 +168,18 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
 			header.Param.NumFeatures,
 		)
 	}
-	if origModel.Param.NumOutputGroup != 1 {
-		return nil, fmt.Errorf("support only 1 output group (got %d)", origModel.Param.NumOutputGroup)
-	}
+	// TODO: belowe is not true (see Agaricus test). Why?
+	// if header.Param.NumClass != origModel.Param.NumOutputGroup {
+	// 	return nil, fmt.Errorf("header number of class and model number of class should be the same (%d != %d)",
+	// 		header.Param.NumClass, origModel.Param.NumOutputGroup)
+	// }
+	e.nClasses = int(origModel.Param.NumOutputGroup)
 	if origModel.Param.NumRoots != 1 {
 		return nil, fmt.Errorf("support only trees with 1 root (got %d)", origModel.Param.NumRoots)
-
+	}
+	e.TreeInfo = make([]int, len(origModel.TreeInfo))
+	for i, v := range origModel.TreeInfo {
+		e.TreeInfo[i] = int(v)
 	}
 
 	nTrees := origModel.Param.NumTrees
