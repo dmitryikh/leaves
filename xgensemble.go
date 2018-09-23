@@ -95,7 +95,7 @@ func (e *XGEnsemble) Predict(fvals []float64, nTrees int, predictions []float64)
 func (e *XGEnsemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nTrees int, nThreads int) error {
 	nRows := len(indptr) - 1
 	if len(predictions) < e.nClasses*nRows {
-		return fmt.Errorf("predictions slice to short (should be at least %d)", e.nClasses*nRows)
+		return fmt.Errorf("predictions slice too short (should be at least %d)", e.nClasses*nRows)
 	}
 	nTrees = e.adjustNTrees(nTrees)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
@@ -171,7 +171,7 @@ func (e *XGEnsemble) predictCSRInner(indptr []int, cols []int, vals []float64, s
 func (e *XGEnsemble) PredictDense(vals []float64, nrows int, ncols int, predictions []float64, nTrees int, nThreads int) error {
 	nRows := nrows
 	if len(predictions) < e.nClasses*nRows {
-		return fmt.Errorf("predictions slice to short (should be at least %d)", e.nClasses*nRows)
+		return fmt.Errorf("predictions slice too short (should be at least %d)", e.nClasses*nRows)
 	}
 	if ncols == 0 || e.MaxFeatureIdx > ncols-1 {
 		return fmt.Errorf("incorrect number of columns")
