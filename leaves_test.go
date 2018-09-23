@@ -442,3 +442,43 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 		t.Errorf("different Predict prediction: %s", err.Error())
 	}
 }
+
+func TestXGDermatology(t *testing.T) {
+	InnerTestXGDermatology(t, 1)
+	InnerTestXGDermatology(t, 2)
+	InnerTestXGDermatology(t, 3)
+	InnerTestXGDermatology(t, 4)
+}
+
+func InnerTestXGDermatology(t *testing.T, nThreads int) {
+	// loading test data
+	testPath := filepath.Join("testdata", "dermatology_test.libsvm")
+	modelPath := filepath.Join("testdata", "xgdermatology.model")
+	truePath := filepath.Join("testdata", "xgdermatology_true_predictions.txt")
+	skipTestIfFileNotExist(t, testPath, modelPath, truePath)
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model
+	model, err := XGEnsembleFromFile(modelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, csr.Rows()*model.nClasses)
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
+	// compare results
+	const tolerance = 1e-6
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+		t.Errorf("different predictions: %s", err.Error())
+	}
+}
