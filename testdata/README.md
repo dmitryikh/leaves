@@ -64,7 +64,7 @@
     np.savetxt('xgagaricus_true_predictions.txt', ypred)
     bst.save_model('xgagaricus.model')
   ```
-  4. 
+  4.
   ```sh
     cp xgagaricus_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp xgagaricus.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
@@ -81,4 +81,58 @@
   cp multiclass.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/multiclass_test.tsv
   cp lgmulticlass.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   cp lgmulticlass_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+  ```
+
+
+  ## Dermatology dataset for XGBoost
+  1. clone https://github.com/dmlc/xgboost
+  2. demo/multiclass_classification
+  3. Read instruction how to take data (https://archive.ics.uci.edu/ml/machine-learning-databases/dermatology/dermatology.data)
+  4. run (modified train.py)
+  ```python
+from __future__ import division
+
+import numpy as np
+import xgboost as xgb
+import sklearn.datasets as ds
+
+# label need to be 0 to num_class -1
+data = np.loadtxt('./dermatology.data', delimiter=',',
+        converters={33: lambda x:int(x == '?'), 34: lambda x:int(x) - 1})
+sz = data.shape
+
+train = data[:int(sz[0] * 0.7), :]
+test = data[int(sz[0] * 0.7):, :]
+train_X = train[:, :33]
+train_Y = train[:, 34]
+test_X = test[:, :33]
+test_Y = test[:, 34]
+
+xg_train = xgb.DMatrix(train_X, label=train_Y)
+xg_test = xgb.DMatrix(test_X, label=test_Y)
+# setup parameters for xgboost
+param = {}
+# use softmax multi-class classification
+param['objective'] = 'multi:softmax'
+# scale weight of positive examples
+param['eta'] = 0.1
+param['max_depth'] = 6
+param['silent'] = 1
+param['nthread'] = 4
+param['num_class'] = 6
+
+watchlist = [(xg_train, 'train'), (xg_test, 'test')]
+num_round = 5
+bst = xgb.train(param, xg_train, num_round, watchlist)
+
+ypred = bst.predict(xg_test, output_margin=True).reshape(test_Y.shape[0], 6)
+np.savetxt('xgdermatology_true_predictions.txt', ypred, delimiter='\t')
+bst.save_model('xgdermatology.model')
+ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
+  ```
+  5.
+  ```sh
+    cp xgdermatology_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp xgdermatology.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp dermatology_test.libsvm $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   ```
