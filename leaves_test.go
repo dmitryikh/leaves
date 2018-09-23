@@ -398,7 +398,7 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	modelPath := filepath.Join("testdata", "lgmulticlass.model")
 	truePath := filepath.Join("testdata", "lgmulticlass_true_predictions.txt")
 	skipTestIfFileNotExist(t, testPath, modelPath, truePath)
-	csr, err := mat.DenseMatFromCsvFile(testPath, 0, true, "\t", 0.0)
+	dense, err := mat.DenseMatFromCsvFile(testPath, 0, true, "\t", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,8 +422,8 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	}
 
 	// do predictions
-	predictions := make([]float64, csr.Rows*model.nClasses)
-	model.PredictDense(csr.Values, csr.Rows, csr.Cols, predictions, 0, nThreads)
+	predictions := make([]float64, dense.Rows*model.nClasses)
+	model.PredictDense(dense.Values, dense.Rows, dense.Cols, predictions, 0, nThreads)
 	// compare results
 	const tolerance = 1e-7
 	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
@@ -432,7 +432,7 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 
 	// check Predict
 	singleIdx := 200
-	fvals := csr.Values[singleIdx*csr.Cols : (singleIdx+1)*csr.Cols]
+	fvals := dense.Values[singleIdx*dense.Cols : (singleIdx+1)*dense.Cols]
 	predictions = make([]float64, model.NClasses())
 	err = model.Predict(fvals, 0, predictions)
 	if err != nil {
