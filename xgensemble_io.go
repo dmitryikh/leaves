@@ -139,8 +139,8 @@ func xgTreeFromTreeModel(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree,
 }
 
 // XGEnsembleFromReader reads  XGBoost model from `reader`
-func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
-	e := &XGEnsemble{}
+func XGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
+	e := &xgEnsemble{}
 
 	// reading header info
 	header, err := xgbin.ReadModelHeader(reader)
@@ -196,11 +196,11 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*XGEnsemble, error) {
 		}
 		e.Trees = append(e.Trees, tree)
 	}
-	return e, nil
+	return &Ensemble{e}, nil
 }
 
 // XGEnsembleFromFile reads XGBoost model from binary file
-func XGEnsembleFromFile(filename string) (*XGEnsemble, error) {
+func XGEnsembleFromFile(filename string) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err

@@ -208,8 +208,8 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 }
 
 // LGEnsembleFromReader reads LightGBM model from `reader`
-func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
-	e := &LGEnsemble{}
+func LGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
+	e := &lgEnsemble{}
 	params, err := util.ReadParamsUntilBlank(reader)
 	if err != nil {
 		return nil, err
@@ -262,11 +262,11 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*LGEnsemble, error) {
 		}
 		e.Trees = append(e.Trees, tree)
 	}
-	return e, nil
+	return &Ensemble{e}, nil
 }
 
 // LGEnsembleFromFile reads LightGBM model from binary file
-func LGEnsembleFromFile(filename string) (*LGEnsemble, error) {
+func LGEnsembleFromFile(filename string) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err
