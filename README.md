@@ -22,6 +22,7 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
     * addition optimizations exploiting only prediction usage
   * Support XGBoost ([repo](https://github.com/dmlc/xgboost)) models:
     * reading models from binary format
+    * support `gbtree` and `gblinear` models
     * supporting multiclass predictions
     * supporting missing values (`nan`)
     * supporting parallel predictions for batches
@@ -96,7 +97,7 @@ Single thread:
     * no support transformations functions (sigmoid, lambdarank, etc). Output scores is _raw scores_
   * XGBoost models:
     * no support transformations functions. Output scores is _raw scores_
-    * support only `gbtree` models (most common)
+    * no support `dart` models
     * could be divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
 
 ## Contacts
