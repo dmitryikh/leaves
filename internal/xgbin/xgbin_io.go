@@ -104,6 +104,17 @@ type RTreeNodeStat struct {
 	LeafChildCnt int32
 }
 
+// GBLinearModelParam - model parameters
+// from src/gbm/gblinear_model.h
+type GBLinearModelParam struct {
+	// number of feature dimension
+	NumFeature uint32
+	// number of output group
+	NumOutputGroup int32
+	// reserved field
+	Reserved [32]int32
+}
+
 // TreeModel contains all input data related to particular tree. Used just as
 // a container of input data for go implementation. Objects layout could be
 // arbitrary
@@ -132,6 +143,14 @@ type ModelHeader struct {
 	Param   LearnerModelParam
 	NameObj string
 	NameGbm string
+}
+
+// GBLinearModel contains all data about gblinear model read from binary file.
+// Used just as a container of input data for go implementation. Objects
+// layout could be arbitrary
+type GBLinearModel struct {
+	Param   GBLinearModelParam
+	Weights []float32
 }
 
 // ReadStruct - read arbitrary data structure from binary stream
@@ -284,4 +303,18 @@ func ReadTreeModel(reader *bufio.Reader) (*TreeModel, error) {
 		}
 	}
 	return treeModel, nil
+}
+
+// ReadGBLinearModel reads gblinear model from binary model file
+func ReadGBLinearModel(reader *bufio.Reader) (*GBLinearModel, error) {
+	gbLinearModel := &GBLinearModel{}
+	err := ReadStruct(reader, &gbLinearModel.Param)
+	if err != nil {
+		return nil, err
+	}
+	gbLinearModel.Weights, err = ReadFloat32Slice(reader)
+	if err != nil {
+		return nil, err
+	}
+	return gbLinearModel, nil
 }
