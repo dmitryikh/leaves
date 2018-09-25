@@ -317,6 +317,54 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 	}
 }
 
+func TestXGBLinAgaricus(t *testing.T) {
+	InnerTestXGBLinAgaricus(t, 1)
+	InnerTestXGBLinAgaricus(t, 2)
+	InnerTestXGBLinAgaricus(t, 3)
+	InnerTestXGBLinAgaricus(t, 4)
+}
+
+func InnerTestXGBLinAgaricus(t *testing.T, nThreads int) {
+	// loading test data
+	path := filepath.Join("testdata", "agaricus_test.libsvm")
+	reader, err := os.Open(path)
+	if err != nil {
+		t.Skipf("Skipping due to absence of %s", path)
+	}
+	bufReader := bufio.NewReader(reader)
+	csr, err := mat.CSRMatFromLibsvm(bufReader, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model
+	path = filepath.Join("testdata", "xgblin_agaricus.model")
+	model, err := XGBLinearFromFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	path = filepath.Join("testdata", "xgblin_agaricus_true_predictions.txt")
+	reader, err = os.Open(path)
+	if err != nil {
+		t.Skipf("Skipping due to absence of %s", path)
+	}
+	bufReader = bufio.NewReader(reader)
+	truePredictions, err := mat.DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, csr.Rows())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
+	// compare results
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-6); err != nil {
+		t.Fatalf("different predictions: %s", err.Error())
+	}
+}
+
 func BenchmarkXGHiggs_dense_1thread(b *testing.B) {
 	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"))
 	if err != nil {
