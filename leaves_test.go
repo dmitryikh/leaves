@@ -123,7 +123,7 @@ func TestXGHiggs(t *testing.T) {
 	InnerTestHiggs(t, model, 4, false, truePath, tolerance)
 }
 
-func InnerTestHiggs(t *testing.T, model Ensemble, nThreads int, isDense bool, truePredictionsFilename string, tolerance float64) {
+func InnerTestHiggs(t *testing.T, model *Ensemble, nThreads int, isDense bool, truePredictionsFilename string, tolerance float64) {
 	// loading test data
 	testPath := filepath.Join("testdata", "higgs_1000examples_test.libsvm")
 	skipTestIfFileNotExist(t, testPath)
@@ -291,8 +291,8 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if model.NTrees() != 3 {
-		t.Fatalf("expected 3 trees (got %d)", model.NTrees())
+	if model.NEstimators() != 3 {
+		t.Fatalf("expected 3 trees (got %d)", model.NEstimators())
 	}
 
 	// loading true predictions as DenseMat
@@ -349,7 +349,7 @@ func BenchmarkXGHiggs_csr_4thread(b *testing.B) {
 	InnerBenchmarkHiggs(b, model, 4, false)
 }
 
-func InnerBenchmarkHiggs(b *testing.B, model Ensemble, nThreads int, isDense bool) {
+func InnerBenchmarkHiggs(b *testing.B, model *Ensemble, nThreads int, isDense bool) {
 	// loading test data
 	truePath := filepath.Join("testdata", "higgs_1000examples_test.libsvm")
 	skipBenchmarkIfFileNotExist(b, truePath)
@@ -408,8 +408,8 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if model.NTrees() != 10 {
-		t.Fatalf("expected 10 trees (got %d)", model.NTrees())
+	if model.NEstimators() != 10 {
+		t.Fatalf("expected 10 trees (got %d)", model.NEstimators())
 	}
 	if model.NClasses() != 5 {
 		t.Fatalf("expected 5 classes (got %d)", model.NClasses())
@@ -422,7 +422,7 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	}
 
 	// do predictions
-	predictions := make([]float64, dense.Rows*model.nClasses)
+	predictions := make([]float64, dense.Rows*model.NClasses())
 	model.PredictDense(dense.Values, dense.Rows, dense.Cols, predictions, 0, nThreads)
 	// compare results
 	const tolerance = 1e-7
@@ -483,7 +483,7 @@ func InnerTestXGDermatology(t *testing.T, nThreads int) {
 	}
 
 	// do predictions
-	predictions := make([]float64, csr.Rows()*model.nClasses)
+	predictions := make([]float64, csr.Rows()*model.NClasses())
 	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 	// compare results
 	const tolerance = 1e-6

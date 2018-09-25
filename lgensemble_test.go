@@ -157,8 +157,8 @@ func TestLGEnsemble(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if model.NTrees() != 2 {
-		t.Fatalf("expected 2 trees (got %d)", model.NTrees())
+	if model.NEstimators() != 2 {
+		t.Fatalf("expected 2 trees (got %d)", model.NEstimators())
 	}
 
 	denseValues := []float64{0.0, 0.0,
