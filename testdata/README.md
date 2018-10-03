@@ -136,3 +136,7 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
     cp xgdermatology.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp dermatology_test.libsvm $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   ```
+
+
+  ## Gradient Boosting Classifier for scikit-learn
+  1. run internal/pickle/testdata/gradient_boosting_classifier.py
