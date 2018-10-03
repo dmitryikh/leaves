@@ -539,3 +539,35 @@ func InnerTestXGDermatology(t *testing.T, nThreads int) {
 		t.Errorf("different predictions: %s", err.Error())
 	}
 }
+
+func TestSKGradientBoostingClassifier(t *testing.T) {
+	// loading test data
+	testPath := filepath.Join("testdata", "sk_gradient_boosting_classifier_test.libsvm")
+	modelPath := filepath.Join("testdata", "sk_gradient_boosting_classifier.model")
+	truePath := filepath.Join("testdata", "sk_gradient_boosting_classifier_true_predictions.txt")
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model
+	model, err := SKEnsembleFromFile(modelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, csr.Rows()*model.NClasses())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, 1)
+	// compare results
+	const tolerance = 1e-6
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+		t.Errorf("different predictions: %s", err.Error())
+	}
+}
