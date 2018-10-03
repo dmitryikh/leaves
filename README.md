@@ -26,6 +26,10 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
     * supporting multiclass predictions
     * supporting missing values (`nan`)
     * supporting parallel predictions for batches
+  * Support scikit-learn ([repo](https://github.com/scikit-learn/scikit-learn)) tree models (experimental support):
+    * reading models from pickle format (protocol `0`)
+    * support `sklearn.ensemble.GradientBoostingClassifier`
+    * supporting parallel predictions for batches
 
 
 ## Usage examples
@@ -99,6 +103,10 @@ Single thread:
     * no support transformations functions. Output scores is _raw scores_
     * no support `dart` models
     * could be divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
+  * scikit-learn tree models:
+    * no support transformations functions. Output scores is _raw scores_ (as from `GradientBoostingClassifier.decision_function`)
+    * only pickle protocol `0` is supported
+    * support only 1 class `sklearn.ensemble.GradientBoostingClassifier` model
 
 ## Contacts
 
