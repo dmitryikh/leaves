@@ -9,6 +9,9 @@ type lgEnsemble struct {
 	Trees         []lgTree
 	MaxFeatureIdx int
 	nClasses      int
+	// lgEnsemble suits for different models from different packages (ex., LightGBM gbrt & sklearn gbrt)
+	// name contains the origin of the model
+	name string
 }
 
 func (e *lgEnsemble) NEstimators() int {
@@ -27,7 +30,7 @@ func (e *lgEnsemble) NFeatures() int {
 }
 
 func (e *lgEnsemble) Name() string {
-	return "lightgbm"
+	return e.name
 }
 
 func (e *lgEnsemble) predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int) {

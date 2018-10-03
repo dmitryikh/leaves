@@ -209,7 +209,7 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 
 // LGEnsembleFromReader reads LightGBM model from `reader`
 func LGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
-	e := &lgEnsemble{}
+	e := &lgEnsemble{name: "lightgbm"}
 	params, err := util.ReadParamsUntilBlank(reader)
 	if err != nil {
 		return nil, err
