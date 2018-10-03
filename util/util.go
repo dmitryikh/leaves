@@ -2,6 +2,7 @@ package util
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"math"
@@ -213,4 +214,15 @@ func SigmoidFloat64SliceInplace(vec []float64) {
 	for i := range vec {
 		vec[i] = Sigmoid(vec[i])
 	}
+}
+
+// Float64FromBytes converts 8 bytes to float
+func Float64FromBytes(bytes []byte, littleEndian bool) float64 {
+	var bits uint64
+	if littleEndian {
+		bits = binary.LittleEndian.Uint64(bytes)
+	} else {
+		bits = binary.BigEndian.Uint64(bytes)
+	}
+	return math.Float64frombits(bits)
 }
