@@ -52,6 +52,7 @@ func xgTreeFromTreeModel(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree,
 		node.Flags |= rightLeaf
 		node.Left = uint32(len(t.leafValues))
 		node.Right = uint32(len(t.leafValues))
+		t.nodes = append(t.nodes, node)
 		t.leafValues = append(t.leafValues, float64(origTree.Nodes[0].Info))
 		return t, nil
 	}
