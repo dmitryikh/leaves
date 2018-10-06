@@ -102,11 +102,11 @@ Single thread:
   * XGBoost models:
     * no support transformations functions. Output scores is _raw scores_
     * no support `dart` models
-    * could be divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
+    * could be slight divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
   * scikit-learn tree models:
     * no support transformations functions. Output scores is _raw scores_ (as from `GradientBoostingClassifier.decision_function`)
     * only pickle protocol `0` is supported
-    * support only 1 class `sklearn.ensemble.GradientBoostingClassifier` model
+    * could be slight divergence between sklearn predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
 
 ## Contacts
 
