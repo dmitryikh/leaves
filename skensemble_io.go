@@ -27,6 +27,20 @@ func lgTreeFromSklearnDecisionTreeRegressor(tree pickle.SklearnDecisionTreeRegre
 		return t, fmt.Errorf("unexpected number of leaves (%d) and nodes (%d)", numLeaves, numNodes)
 	}
 
+	if numNodes == 0 {
+		// special case
+		// we mimic decision rule but left and right childs lead to the same result
+		t.nodes = make([]lgNode, 0, 1)
+		node := numericalNode(0, 0, 0.0, 0)
+		node.Flags |= leftLeaf
+		node.Flags |= rightLeaf
+		node.Left = uint32(len(t.leafValues))
+		node.Right = uint32(len(t.leafValues))
+		t.nodes = append(t.nodes, node)
+		t.leafValues = append(t.leafValues, tree.Tree.Values[0]*scale+base)
+		return t, nil
+	}
+
 	// Numerical only
 	createNode := func(idx int) (lgNode, error) {
 		node := lgNode{}
@@ -139,7 +153,6 @@ func SKEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 		e.Trees = append(e.Trees, tree)
 		base = 0.0
 	}
-	fmt.Printf("%#v\n", e.Trees[0].leafValues)
 	return &Ensemble{e}, nil
 }
 
