@@ -326,7 +326,7 @@ func (t *SklearnGradientBoosting) Build(build Build) (err error) {
 
 type SKlearnInitEstimator struct {
 	Name  string
-	Prior float64
+	Prior []float64
 }
 
 func (e *SKlearnInitEstimator) Reduce(reduce Reduce) (err error) {
@@ -363,7 +363,28 @@ func (e *SKlearnInitEstimator) Build(build Build) (err error) {
 		if numpyScalar.Type.Type != "f8" {
 			return fmt.Errorf("expected f8, got (%#v)", numpyScalar.Type)
 		}
-		e.Prior = util.Float64FromBytes(numpyScalar.Data, numpyScalar.Type.LittleEndinan)
+		e.Prior = append(e.Prior, util.Float64FromBytes(numpyScalar.Data, numpyScalar.Type.LittleEndinan))
+	} else if e.Name == "PriorProbabilityEstimator" {
+		dict, err := toDict(build.Args)
+		if err != nil {
+			return err
+		}
+		priorObj, err := dict.value("priors")
+		if err != nil {
+			return err
+		}
+		numpyArray := NumpyArrayRaw{}
+		err = ParseClass(&numpyArray, priorObj)
+		if err != nil {
+			return err
+		}
+		if numpyArray.Type.Type != "f8" {
+			return fmt.Errorf("expected f8, got (%#v)", numpyArray.Type)
+		}
+		numpyArray.Data.Iterate(8, func(bytes []byte) error {
+			e.Prior = append(e.Prior, util.Float64FromBytes(bytes, numpyArray.Type.LittleEndinan))
+			return nil
+		})
 	} else {
 		return fmt.Errorf("unknown init estimator class: %s", e.Name)
 	}
