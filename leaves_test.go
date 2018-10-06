@@ -571,3 +571,45 @@ func TestSKGradientBoostingClassifier(t *testing.T) {
 		t.Errorf("different predictions: %s", err.Error())
 	}
 }
+
+func TestSKIris(t *testing.T) {
+	testPath := filepath.Join("testdata", "iris_test.libsvm")
+	modelPath := filepath.Join("testdata", "sk_iris.model")
+	truePath := filepath.Join("testdata", "sk_iris_true_predictions.txt")
+	skipTestIfFileNotExist(t, testPath, truePath, modelPath)
+
+	// loading test data
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model
+	model, err := SKEnsembleFromFile(modelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, csr.Rows()*model.NClasses())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, 1)
+	// compare results
+	const tolerance = 1e-6
+	// compare results. Count number of mismatched values beacase of floating point
+	// comparisons problems: fval <= thresholds.
+	// I think this is because float32 format in sklearn X matrix
+	count, err := util.NumMismatchedFloat64Slices(truePredictions.Values, predictions, tolerance)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if count > 2 {
+		t.Errorf("mismatched more than %d predictions", count)
+	}
+}

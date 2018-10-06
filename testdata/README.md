@@ -140,3 +140,7 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
 
   ## Gradient Boosting Classifier for scikit-learn
   1. run internal/pickle/testdata/gradient_boosting_classifier.py
+
+
+  ## Iris for scikit-learn
+  1. run testdata/iris.py
