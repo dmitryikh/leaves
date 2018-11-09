@@ -71,7 +71,7 @@
     cp ../data/agaricus.txt.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/agaricus_test.libsvm
   ```
 
-  ## Multiclass classification dataset for LightGBM model
+## Multiclass classification dataset for LightGBM model
   1. clone https://github.com/Microsoft/LightGBM
   2. cd to examples/multiclass_classification
   3. run
@@ -84,7 +84,7 @@
   ```
 
 
-  ## Dermatology dataset for XGBoost
+## Dermatology dataset for XGBoost
   1. clone https://github.com/dmlc/xgboost
   2. demo/multiclass_classification
   3. Read instruction how to take data (https://archive.ics.uci.edu/ml/machine-learning-databases/dermatology/dermatology.data)
@@ -138,9 +138,9 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
   ```
 
 
-  ## Gradient Boosting Classifier for scikit-learn
+## Gradient Boosting Classifier for scikit-learn
   1. run internal/pickle/testdata/gradient_boosting_classifier.py
 
 
-  ## Iris for scikit-learn
+## Iris for scikit-learn
   1. run testdata/iris.py
