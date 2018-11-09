@@ -144,3 +144,7 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
 
 ## Iris for scikit-learn
   1. run testdata/iris.py
+
+
+## Iris for LightGBM Random Forest
+  1. run testdata/iris_lightgbm_rf.py
