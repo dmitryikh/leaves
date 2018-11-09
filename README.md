@@ -63,7 +63,11 @@ func main() {
 }
 ```
 
-In order to use XGBoost model, just change `leaves.LGEnsembleFromFile`, to `leaves.XGEnsembleFromFile`. For mode usage examples see [leaves_test.go](leaves_test.go).
+In order to use XGBoost model, just change `leaves.LGEnsembleFromFile`, to `leaves.XGEnsembleFromFile`.
+
+## Documentation
+
+Documentation is hosted on godoc ([link](https://godoc.org/github.com/dmitryikh/leaves)). Documentation contains complex usage examples and full API reference. Some additional information about usage examples can be found in [leaves_test.go](leaves_test.go).
 
 ## Benchmark
 
