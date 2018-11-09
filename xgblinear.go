@@ -26,7 +26,7 @@ func (e *xgLinear) NFeatures() int {
 }
 
 func (e *xgLinear) Name() string {
-	return "gblinear"
+	return "xgboost.gblinear"
 }
 
 func (e *xgLinear) predictInner(fvals []float64, nIterations int, predictions []float64, startIndex int) {
