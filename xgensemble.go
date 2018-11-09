@@ -31,7 +31,7 @@ func (e *xgEnsemble) NFeatures() int {
 }
 
 func (e *xgEnsemble) Name() string {
-	return "gbtree"
+	return "xgboost.gbtree"
 }
 
 func (e *xgEnsemble) adjustNEstimators(nEstimators int) int {
