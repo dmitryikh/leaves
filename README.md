@@ -12,24 +12,21 @@
 _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting Regression Trees) models in **pure Go**. The goal of the project - make it possible to use models from popular GBRT frameworks in Go programs without C API bindings.
 
 ## Features
-
+  * General Features:
+    * support parallel predictions for batches
   * Support LightGBM ([repo](https://github.com/Microsoft/LightGBM)) models:
-    * reading models from text format
-    * supporting numerical & categorical features
-    * supporting parallel predictions for batches
-    * supporting multiclass predictions
+    * read models from text format
+    * support multiclass predictions
     * addition optimizations for categorical features (for example, _one hot_ decision rule)
     * addition optimizations exploiting only prediction usage
   * Support XGBoost ([repo](https://github.com/dmlc/xgboost)) models:
-    * reading models from binary format
+    * read models from binary format
     * support `gbtree` and `gblinear` models
-    * supporting multiclass predictions
-    * supporting missing values (`nan`)
-    * supporting parallel predictions for batches
+    * support multiclass predictions
+    * support missing values (`nan`)
   * Support scikit-learn ([repo](https://github.com/scikit-learn/scikit-learn)) tree models (experimental support):
-    * reading models from pickle format (protocol `0`)
+    * read models from pickle format (protocol `0`)
     * support `sklearn.ensemble.GradientBoostingClassifier`
-    * supporting parallel predictions for batches
 
 
 ## Usage examples
@@ -102,11 +99,11 @@ Single thread:
   * XGBoost models:
     * no support transformations functions. Output scores is _raw scores_
     * no support `dart` models
-    * could be slight divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
+    * could be slight divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances
   * scikit-learn tree models:
     * no support transformations functions. Output scores is _raw scores_ (as from `GradientBoostingClassifier.decision_function`)
     * only pickle protocol `0` is supported
-    * could be slight divergence between sklearn predictions vs. _leaves_ because of floating point convertions and comparisons tolerances.
+    * could be slight divergence between sklearn predictions vs. _leaves_ because of floating point convertions and comparisons tolerances
 
 ## Contacts
 
