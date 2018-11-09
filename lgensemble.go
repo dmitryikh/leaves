@@ -12,6 +12,10 @@ type lgEnsemble struct {
 	// lgEnsemble suits for different models from different packages (ex., LightGBM gbrt & sklearn gbrt)
 	// name contains the origin of the model
 	name string
+	// averageOutput = true means that trees predictions should be averaged (like in random forest)
+	// NOTE: LightGBM original implementation always divides result by NEstimators() if average_output set.
+	// `leaves` implementation divides result by nEstimators (adjusted number of trees used for prediction)
+	averageOutput bool
 }
 
 func (e *lgEnsemble) NEstimators() int {
@@ -37,9 +41,13 @@ func (e *lgEnsemble) predictInner(fvals []float64, nEstimators int, predictions 
 	for k := 0; k < e.nClasses; k++ {
 		predictions[startIndex+k] = 0.0
 	}
+	coef := 1.0
+	if e.averageOutput {
+		coef = 1.0 / float64(nEstimators)
+	}
 	for i := 0; i < nEstimators; i++ {
 		for k := 0; k < e.nClasses; k++ {
-			predictions[startIndex+k] += e.Trees[i*e.nClasses+k].predict(fvals)
+			predictions[startIndex+k] += e.Trees[i*e.nClasses+k].predict(fvals) * coef
 		}
 	}
 }

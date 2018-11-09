@@ -209,7 +209,7 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 
 // LGEnsembleFromReader reads LightGBM model from `reader`
 func LGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
-	e := &lgEnsemble{name: "lightgbm"}
+	e := &lgEnsemble{name: "lightgbm.gbdt"}
 	params, err := util.ReadParamsUntilBlank(reader)
 	if err != nil {
 		return nil, err
@@ -240,6 +240,11 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 		return nil, err
 	}
 	e.MaxFeatureIdx = maxFeatureIdx
+
+	if params.Contains("average_output") {
+		e.name = "lightgbm.rf"
+		e.averageOutput = true
+	}
 
 	treeSizesStr, isFound := params["tree_sizes"]
 	if !isFound {
