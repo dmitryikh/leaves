@@ -47,6 +47,8 @@ func ReadParamsUntilBlank(reader *bufio.Reader) (stringParams, error) {
 			return nil, fmt.Errorf("meet wrong format while reading params")
 		} else if len(tokens) == 2 {
 			params[tokens[0]] = tokens[1]
+		} else if len(tokens) == 1 {
+			params[tokens[0]] = ""
 		}
 		line, err = reader.ReadString('\n')
 		if err != nil && err != io.EOF {
@@ -142,6 +144,11 @@ func (p *stringParams) ToInt32Slice(key string) ([]int32, error) {
 		values = append(values, int32(value))
 	}
 	return values, nil
+}
+
+func (p *stringParams) Contains(key string) bool {
+	_, isFound := (*p)[key]
+	return isFound
 }
 
 var multiplyDeBruijnBitPosition = [...]uint32{
