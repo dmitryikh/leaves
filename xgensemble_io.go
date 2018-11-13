@@ -148,9 +148,14 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 	if err != nil {
 		return nil, err
 	}
-	if header.NameGbm != "gbtree" {
-		return nil, fmt.Errorf("only gbtree is supported (got %s)", header.NameGbm)
+	if header.NameGbm == "gbtree" {
+		e.name = "xgboost.gbtree"
+	} else if header.NameGbm == "dart" {
+		e.name = "xgboost.dart"
+	} else {
+		return nil, fmt.Errorf("only 'gbtree' or 'dart' is supported (got %s)", header.NameGbm)
 	}
+
 	if header.Param.NumFeatures == 0 {
 		return nil, fmt.Errorf("zero number of features")
 	}
@@ -169,7 +174,33 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 			header.Param.NumFeatures,
 		)
 	}
-	// TODO: belowe is not true (see Agaricus test). Why?
+
+	e.WeightDrop = make([]float64, origModel.Param.NumTrees)
+	if header.NameGbm == "dart" {
+		// read additional float32 slice of weighs of dropped trees. Only for 'dart' models
+		weightDrop, err := xgbin.ReadFloat32Slice(reader)
+		if err != nil {
+			return nil, err
+		}
+		if len(weightDrop) != int(origModel.Param.NumTrees) {
+			return nil, fmt.Errorf(
+				"unexpected len(weightDrop) for 'dart' (got: %d, expected: %d)",
+				len(weightDrop),
+				origModel.Param.NumTrees,
+			)
+		}
+		for i, v := range weightDrop {
+			e.WeightDrop[i] = float64(v)
+		}
+	} else if header.NameGbm == "gbtree" {
+		// use 1.0 as default. 1.0 scale will not break down anything
+		for i := 0; i < int(origModel.Param.NumTrees); i++ {
+			e.WeightDrop[i] = 1.0
+		}
+	} else {
+		return nil, fmt.Errorf("unsupported model type (got: %s)", header.NameGbm)
+	}
+	// TODO: below is not true (see Agaricus test). Why?
 	// if header.Param.NumClass != origModel.Param.NumOutputGroup {
 	// 	return nil, fmt.Errorf("header number of class and model number of class should be the same (%d != %d)",
 	// 		header.Param.NumClass, origModel.Param.NumOutputGroup)
