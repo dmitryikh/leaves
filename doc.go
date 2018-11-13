@@ -11,7 +11,7 @@ LightGBM model
 
 Example: binary classification
 
-Python script to build the model:
+build_breast_cancer_model.py:
 
 	import lightgbm as lgb
 	import numpy as np
@@ -33,9 +33,9 @@ Python script to build the model:
 
 	clf.save_model('lg_breast_cancer.model')  # save the model in txt format
 	np.savetxt('lg_breast_cancer_true_predictions.txt', y_pred)
-	datasets.dump_svmlight_file(X_test, y_test, 'breast_cancer_test.libsvm')
+	np.savetxt('breast_cancer_test.tsv', X_test, delimiter='\t')
 
-Go code to test leaves predictions on the model:
+predict_breast_cancer_model.go:
 
 	package main
 
@@ -94,7 +94,7 @@ XGBoost Model
 
 example: Multiclass Classification
 
-Python script to build the model:
+build_iris_model.py
 
 	import numpy as np
 	from sklearn import datasets
@@ -120,7 +120,7 @@ Python script to build the model:
 	np.savetxt('xg_iris_true_predictions.txt', y_pred, delimiter='\t')
 	datasets.dump_svmlight_file(X_test, y_test, 'iris_test.libsvm')
 
-Go code to test leaves predictions on the model:
+predict_iris_model.go:
 
 	package main
 
@@ -179,7 +179,7 @@ Output:
 	NFeatures: 4
 	NClasses: 3
 	NEstimators: 5
-	Predictions the same! (mismatch = 1)
+	Predictions the same! (mismatch = 0)
 
 */
 package leaves
