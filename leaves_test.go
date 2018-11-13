@@ -647,3 +647,44 @@ func TestLGRandomForestIris(t *testing.T) {
 		t.Errorf("different predictions: %s", err.Error())
 	}
 }
+
+func TestXGDARTAgaricus(t *testing.T) {
+	// loading test data
+	path := filepath.Join("testdata", "agaricus_test.libsvm")
+	reader, err := os.Open(path)
+	if err != nil {
+		t.Skipf("Skipping due to absence of %s", path)
+	}
+	bufReader := bufio.NewReader(reader)
+	csr, err := mat.CSRMatFromLibsvm(bufReader, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model
+	path = filepath.Join("testdata", "xg_dart_agaricus.model")
+	model, err := XGEnsembleFromFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	path = filepath.Join("testdata", "xg_dart_agaricus_true_predictions.txt")
+	reader, err = os.Open(path)
+	if err != nil {
+		t.Skipf("Skipping due to absence of %s", path)
+	}
+	bufReader = bufio.NewReader(reader)
+	truePredictions, err := mat.DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, csr.Rows())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 10, 1)
+	// compare results
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-5); err != nil {
+		t.Fatalf("different predictions: %s", err.Error())
+	}
+}
