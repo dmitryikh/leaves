@@ -181,5 +181,9 @@ Output:
 	NEstimators: 5
 	Predictions the same! (mismatch = 1)
 
+Notes on XGBoost DART support
+
+Please note that one must not provide nEstimators = 0 when predict with DART models from xgboost. For more details see xgboost's documentation.
+
 */
 package leaves

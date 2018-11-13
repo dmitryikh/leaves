@@ -8,7 +8,7 @@ import (
 	"github.com/dmitryikh/leaves/internal/xgbin"
 )
 
-// XGBLinearFromReader reads  XGBoost's gblinear model from `reader`
+// XGBLinearFromReader reads  XGBoost's 'gblinear' model from `reader`
 func XGBLinearFromReader(reader *bufio.Reader) (*Ensemble, error) {
 	e := &xgLinear{}
 
@@ -34,7 +34,7 @@ func XGBLinearFromReader(reader *bufio.Reader) (*Ensemble, error) {
 	return &Ensemble{e}, nil
 }
 
-// XGBLinearFromFile reads XGBoost's gblinear model from binary file
+// XGBLinearFromFile reads XGBoost's 'gblinear' model from binary file
 func XGBLinearFromFile(filename string) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {

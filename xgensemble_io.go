@@ -139,7 +139,7 @@ func xgTreeFromTreeModel(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree,
 	return t, nil
 }
 
-// XGEnsembleFromReader reads  XGBoost model from `reader`
+// XGEnsembleFromReader reads XGBoost model from `reader`. Works with 'gbtree' and 'dart' models
 func XGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 	e := &xgEnsemble{}
 
@@ -231,7 +231,7 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 	return &Ensemble{e}, nil
 }
 
-// XGEnsembleFromFile reads XGBoost model from binary file
+// XGEnsembleFromFile reads XGBoost model from binary file. Works with 'gbtree' and 'dart' models
 func XGEnsembleFromFile(filename string) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
