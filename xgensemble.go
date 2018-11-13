@@ -13,6 +13,9 @@ type xgEnsemble struct {
 	nClasses      int
 	TreeInfo      []int
 	BaseScore     float64
+	WeightDrop    []float64
+	// name contains the origin of the model (examples: 'xgboost.gbtree', 'xgboost.dart')
+	name string
 }
 
 func (e *xgEnsemble) NEstimators() int {
@@ -31,7 +34,7 @@ func (e *xgEnsemble) NFeatures() int {
 }
 
 func (e *xgEnsemble) Name() string {
-	return "xgboost.gbtree"
+	return e.name
 }
 
 func (e *xgEnsemble) adjustNEstimators(nEstimators int) int {
@@ -48,7 +51,7 @@ func (e *xgEnsemble) predictInner(fvals []float64, nEstimators int, predictions 
 		predictions[startIndex+k] = e.BaseScore
 		for i := 0; i < nEstimators; i++ {
 			if e.TreeInfo[i] == k {
-				predictions[startIndex+k] += e.Trees[i].predict(fvals)
+				predictions[startIndex+k] += e.Trees[i].predict(fvals) * e.WeightDrop[i]
 			}
 		}
 	}
