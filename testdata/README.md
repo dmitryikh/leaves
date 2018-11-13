@@ -11,7 +11,7 @@
     xgboost xgboost.conf task=pred model_in=higgs.model pred_margin=true test_path="../data/higgs_1000examples_test.libsvm" name_pred="xghiggs_1000examples_true_predictions.txt"
     cp ../data/higgs_1000examples_test.libsvm $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp xghiggs_1000examples_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
-    cp xghiggs.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/. 
+    cp xghiggs.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   ```
 
 ## Higgs dataset for LightGBM model
@@ -25,7 +25,7 @@
     lightgbm task=predict data=../data/higgs_1000examples_test.libsvm input_model=lghiggs.model output_result=lghiggs_1000examples_true_predictions.txt predict_raw_score=true
     cp ../data/higgs_1000examples_test.libsvm $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp lghiggs_1000examples_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
-    cp lghiggs.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/. 
+    cp lghiggs.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   ```
 
 ## MSLTR dateset for LightGBM model
@@ -39,7 +39,7 @@
     lightgbm task=predict data=../data/msltr_1000examples_test.libsvm input_model=lgmsltr.model output_result=lgmsltr_1000examples_true_predictions.txt predict_raw_score=true
     cp ../data/msltr_1000examples_test.libsvm $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp lgmsltr_1000examples_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
-    cp lgmsltr.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/. 
+    cp lgmsltr.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   ```
 
 ## Agaricus dataset for XGBoost model
@@ -68,6 +68,41 @@
   ```sh
     cp xgagaricus_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp xgagaricus.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp ../data/agaricus.txt.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/agaricus_test.libsvm
+  ```
+
+## Agaricus dataset for XGBoost DART model
+
+  1. clone https://github.com/dmlc/xgboost
+  2. cd to xgboost/demo/guide-python/
+  3. run script there:
+  ```python
+  import numpy as np
+  import xgboost as xgb
+  # read in data
+  dtrain = xgb.DMatrix('../data/agaricus.txt.train')
+  dtest = xgb.DMatrix('../data/agaricus.txt.test')
+  param = {
+      'booster': 'gbtree',
+      'max_depth': 5, 'learning_rate': 0.1,
+      'objective': 'binary:logistic', 'silent': True,
+      'sample_type': 'uniform',
+      'normalize_type': 'tree',
+      'rate_drop': 0.1,
+      'skip_drop': 0.5
+  }
+  num_round = 20
+  bst = xgb.train(param, dtrain, num_round)
+
+  # make prediction
+  ypred = bst.predict(dtest, output_margin=True, ntree_limit=10)
+  np.savetxt('xg_dart_agaricus_true_predictions.txt', ypred)
+  bst.save_model('xg_dart_agaricus.model')
+  ```
+  4.
+  ```sh
+    cp xg_dart_agaricus_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp xg_dart_agaricus.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp ../data/agaricus.txt.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/agaricus_test.libsvm
   ```
 
