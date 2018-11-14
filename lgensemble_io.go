@@ -40,8 +40,8 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 	if err != nil {
 		return t, err
 	}
-	if numLeaves < 2 {
-		return t, fmt.Errorf("num_leaves < 2")
+	if numLeaves < 1 {
+		return t, fmt.Errorf("num_leaves < 1")
 	}
 	numNodes := numLeaves - 1
 
@@ -50,6 +50,12 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 		return t, err
 	}
 	t.leafValues = leafValues
+
+	if numLeaves == 1 {
+		// special case - constant value tree
+		return t, nil
+	}
+
 	leftChilds, err := params.ToInt32Slice("left_child")
 	if err != nil {
 		return t, err

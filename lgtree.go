@@ -73,7 +73,7 @@ func (t *lgTree) decision(node *lgNode, fval float64) bool {
 
 func (t *lgTree) predict(fvals []float64) float64 {
 	if len(t.nodes) == 0 {
-		return 0.0
+		return t.leafValues[0]
 	}
 	idx := uint32(0)
 	for {
@@ -105,9 +105,6 @@ func (t *lgTree) findInBitset(idx uint32, pos uint32) bool {
 }
 
 func (t *lgTree) nLeaves() int {
-	if len(t.nodes) == 0 {
-		return 0
-	}
 	return len(t.nodes) + 1
 }
 

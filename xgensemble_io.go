@@ -44,15 +44,7 @@ func xgTreeFromTreeModel(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree,
 	t.nCategorical = 0
 
 	if numNodes == 1 {
-		// special case
-		// we mimic decision rule but left and right childs lead to the same result
-		t.nodes = make([]lgNode, 0, numNodes)
-		node := numericalNode(0, 0, 0.0, 0)
-		node.Flags |= leftLeaf
-		node.Flags |= rightLeaf
-		node.Left = uint32(len(t.leafValues))
-		node.Right = uint32(len(t.leafValues))
-		t.nodes = append(t.nodes, node)
+		// special case - constant value tree
 		t.leafValues = append(t.leafValues, float64(origTree.Nodes[0].Info))
 		return t, nil
 	}
