@@ -186,3 +186,6 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
 
 ## Breast Cancer for LightGBM DART model
   1. run testdata/lg_dart_breast_cancer.py
+
+## KDD Cup 99 for LightGBM model
+  1. run testdata/lg_kddcup99.py

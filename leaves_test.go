@@ -726,3 +726,42 @@ func TestLGDARTBreastCancer(t *testing.T) {
 		t.Errorf("different predictions: %s", err.Error())
 	}
 }
+
+// test on categorical variables in LightGBM
+func TestLGKDDCup99(t *testing.T) {
+	testPath := filepath.Join("testdata", "kddcup99_test.tsv")
+	modelPath := filepath.Join("testdata", "lg_kddcup99.model")
+	truePath := filepath.Join("testdata", "lg_kddcup99_true_predictions.txt")
+	skipTestIfFileNotExist(t, testPath, truePath, modelPath)
+
+	// loading test data
+	test, err := mat.DenseMatFromCsvFile(testPath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model
+	model, err := LGEnsembleFromFile(modelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, test.Rows*model.NClasses())
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// compare results
+	const tolerance = 1e-6
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+		t.Errorf("different predictions: %s", err.Error())
+	}
+}
