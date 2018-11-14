@@ -174,21 +174,45 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
 
 
 ## Gradient Boosting Classifier for scikit-learn
-  1. run internal/pickle/testdata/gradient_boosting_classifier.py
+  1. run
+  ```sh
+    cd internal/pickle/testdata
+    python gradient_boosting_classifier.py
+  ```
 
 
 ## Iris for scikit-learn
-  1. run testdata/iris.py
+  1. run
+  ```sh
+    cd testdata
+    python iris.py
+  ```
 
 
 ## Iris for LightGBM Random Forest
-  1. run testdata/iris_lightgbm_rf.py
+  1. run
+  ```sh
+    cd pytotestdata
+    python iris_lightgbm_rf.py
+  ```
 
 ## Breast Cancer for LightGBM DART model
-  1. run testdata/lg_dart_breast_cancer.py
+  1. run
+  ```sh
+    cd testdata
+    python lg_dart_breast_cancer.py
+  ```
 
 ## KDD Cup 99 for LightGBM model
-  1. run testdata/lg_kddcup99.py
+  1. run
+  ```sh
+    cd testdata
+    python lg_kddcup99.py
+  ```
 
 ## KDD Cup 99 for LightGBM model for benchmark
-  1. run testdata/lg_kddcup99.py bench
+  1. run
+  ```sh
+    cd testdata
+    python lg_kddcup99.py bench
+  ```
