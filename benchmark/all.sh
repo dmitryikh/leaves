@@ -9,7 +9,7 @@ $python xg.py -d  ../testdata/higgs_1000examples_test.libsvm \
 done
 
 for j in 1 4; do
-echo "---=== lghiggs.py ($j threads) ===---"
+echo "---=== LightGBM Higgs ($j threads) ===---"
 $python lg.py -d  ../testdata/higgs_1000examples_test.libsvm \
               -m ../testdata/lghiggs.model \
               -t ../testdata/lghiggs_1000examples_true_predictions.txt \
@@ -17,9 +17,20 @@ $python lg.py -d  ../testdata/higgs_1000examples_test.libsvm \
 done
 
 for j in 1 4; do
-echo "---=== lgmsltr.py ($j threads) ===---"
+echo "---=== LightGBM MS LTR ($j threads) ===---"
 $python lg.py -d  ../testdata/msltr_1000examples_test.libsvm \
               -m ../testdata/lgmsltr.model \
               -t ../testdata/lgmsltr_1000examples_true_predictions.txt \
+              -j $j
+done
+
+# do not forget run before to generate data:
+# > cd testdata
+# > $python lg_kddcup99.py bench
+for j in 1 4; do
+echo "---=== LightGBM KDD Cup 99 ($j threads) ===---"
+$python lg.py -d  ../testdata/kddcup99_test_for_bench.tsv \
+              -m ../testdata/lg_kddcup99_for_bench.model \
+              -t ../testdata/lg_kddcup99_true_predictions_for_bench.txt \
               -j $j
 done
