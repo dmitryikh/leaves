@@ -185,5 +185,10 @@ Notes on XGBoost DART support
 
 Please note that one must not provide nEstimators = 0 when predict with DART models from xgboost. For more details see xgboost's documentation.
 
+Notes on LightGBM DART support
+
+Models trained with 'boosting_type': 'dart' options can be loaded with func `leaves.LGEnsembleFromFile`.
+But the name of the model (given by `Name()` method) will be 'lightgbm.gbdt', because LightGBM model format doesn't distinguish 'gbdt' and 'dart' models.
+
 */
 package leaves
