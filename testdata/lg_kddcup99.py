@@ -3,6 +3,12 @@ import numpy as np
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+import sys
+
+if len(sys.argv) == 2 and sys.argv[1] == 'bench':
+    for_bench = True
+else:
+    for_bench = False
 
 data = datasets.fetch_kddcup99(subset='SA')
 X, y = data['data'], data['target']
@@ -59,9 +65,10 @@ y = LabelEncoder().fit_transform(y)
 for idx in symbolic_features:
     X[:, idx] = LabelEncoder().fit_transform(X[:, idx])
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.005, random_state=0)
+test_size = 1000 if for_bench else 0.005
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=0)
 
-n_estimators = 10
+n_estimators = 100 if for_bench else 10
 d_train = lgb.Dataset(X_train, label=y_train)
 params = {
     'boosting_type': 'gbrt',
@@ -71,7 +78,8 @@ params = {
 clf = lgb.train(params, d_train, n_estimators, categorical_feature=categorical_features)
 y_pred = clf.predict(X_test, raw_score=True)
 
-clf.save_model('lg_kddcup99.model')  # save the model in txt format
-np.savetxt('lg_kddcup99_true_predictions.txt', y_pred, delimiter='\t')
+suffix = '_for_bench' if for_bench else ''
+clf.save_model(f'lg_kddcup99{suffix}.model')  # save the model in txt format
+np.savetxt(f'lg_kddcup99_true_predictions{suffix}.txt', y_pred, delimiter='\t')
 # NOTE: fmt tuned to get small size file
-np.savetxt('kddcup99_test.tsv', X_test, delimiter='\t', fmt='%0.18g')
+np.savetxt(f'kddcup99_test{suffix}.tsv', X_test, delimiter='\t', fmt='%0.18g')

@@ -765,3 +765,33 @@ func TestLGKDDCup99(t *testing.T) {
 		t.Errorf("different predictions: %s", err.Error())
 	}
 }
+
+func BenchmarkLGKDDCup99_dense_1thread(b *testing.B) {
+	InnerBenchmarkLGKDDCup99(b, 1)
+}
+
+func BenchmarkLGKDDCup99_dense_4thread(b *testing.B) {
+	InnerBenchmarkLGKDDCup99(b, 4)
+}
+
+func InnerBenchmarkLGKDDCup99(b *testing.B, nThreads int) {
+	// loading test data
+	testPath := filepath.Join("testdata", "kddcup99_test_for_bench.tsv")
+	modelPath := filepath.Join("testdata", "lg_kddcup99_for_bench.model")
+	skipBenchmarkIfFileNotExist(b, testPath, modelPath)
+	test, err := mat.DenseMatFromCsvFile(testPath, 0, false, "\t", 0.0)
+	if err != nil {
+		b.Fatal(err)
+	}
+	model, err := LGEnsembleFromFile(modelPath)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// do benchmark
+	b.ResetTimer()
+	predictions := make([]float64, test.Rows*model.NClasses())
+	for i := 0; i < b.N; i++ {
+		model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, nThreads)
+	}
+}

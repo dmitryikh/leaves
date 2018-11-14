@@ -189,3 +189,6 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
 
 ## KDD Cup 99 for LightGBM model
   1. run testdata/lg_kddcup99.py
+
+## KDD Cup 99 for LightGBM model for benchmark
+  1. run testdata/lg_kddcup99.py bench
