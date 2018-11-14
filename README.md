@@ -85,6 +85,7 @@ Single thread:
 |-----------|----------|-------|------------|---------|----------|
 | LightGBM [MS LTR](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 137 |500 | 1000 | 49ms | 51ms |
 | LightGBM [Higgs](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 28 | 500 | 1000 | 50ms | 50ms |
+| LightGBM KDD Cup 99* | 41 | 1200 | 1000 | 70ms | 85ms |
 | XGBoost Higgs | 28 | 500 | 1000 | 44ms | 50ms |
 
 4 threads:
@@ -93,9 +94,12 @@ Single thread:
 |-----------|----------|-------|------------|---------|----------|
 | LightGBM [MS LTR](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 137 |500 | 1000 | 14ms | 14ms |
 | LightGBM [Higgs](https://github.com/Microsoft/LightGBM/blob/master/docs/Experiments.rst#comparison-experiment) | 28 | 500 | 1000 | 14ms | 14ms |
+| LightGBM KDD Cup 99* | 41 | 1200 | 1000 | 19ms | 24ms |
 | XGBoost Higgs | 28 | 500 | 1000 | ? | 14ms |
 
-? - currenly I'm unable to utilize multithreading form XGBoost predictions by means of python bindings
+(?) - currenly I'm unable to utilize multithreading form XGBoost predictions by means of python bindings
+
+(*) - KDD Cup 99 problem involves continuous and categorical features simultaneously
 
 ## Limitations
 
