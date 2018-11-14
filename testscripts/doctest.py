@@ -58,6 +58,7 @@ def execute_go_script(script):
     if not os.path.isfile(executable_filename):
         raise RuntimeError(f'no executable found: {executable_filename}')
 
+    logger.info(f'Run {executable_filename}')
     execute_check_output([f'./{executable_filename}'], script.output)
 
 
