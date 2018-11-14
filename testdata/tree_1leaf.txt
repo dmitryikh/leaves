@@ -1,0 +1,14 @@
+Tree=2236
+num_leaves=1
+num_cat=0
+split_feature=
+split_gain=
+threshold=
+decision_type=
+left_child=
+right_child=
+leaf_value=0.123
+leaf_count=
+internal_value=
+internal_count=
+shrinkage=1.03754e-322

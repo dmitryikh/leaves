@@ -77,6 +77,43 @@ func TestReadLGTree(t *testing.T) {
 	}
 }
 
+func TestLGTreeLeaf1(t *testing.T) {
+	path := filepath.Join("testdata", "tree_1leaf.txt")
+	reader, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bufReader := bufio.NewReader(reader)
+
+	tree, err := lgTreeFromReader(bufReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if tree.nLeaves() != 1 {
+		t.Fatalf("expected tree with 1 leaves (got %d)", tree.nLeaves())
+	}
+	if tree.nNodes() != 0 {
+		t.Fatalf("expected tree with 0 node (got %d)", tree.nNodes())
+	}
+
+	fvals := []float64{0.0}
+	check := func(truePred float64) {
+		p := tree.predict(fvals)
+		if !util.AlmostEqualFloat64(p, truePred, 1e-3) {
+			t.Errorf("expected prediction %f, got %f", truePred, p)
+		}
+	}
+
+	check(0.123)
+	fvals[0] = 10.0
+	check(0.123)
+	fvals[0] = -10.0
+	check(0.123)
+	fvals[0] = math.NaN()
+	check(0.123)
+}
+
 func TestLGTreeLeaves2(t *testing.T) {
 	path := filepath.Join("testdata", "tree_2leaves.txt")
 	reader, err := os.Open(path)
