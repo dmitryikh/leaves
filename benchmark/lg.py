@@ -15,7 +15,12 @@ params = parser.parse_args()
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
 logging.info(f'start loading test data from {params.data}')
-X, _ = load_svmlight_file(params.data, zero_based=True)
+if params.data.endswith('.libsvm'):
+    X, _ = load_svmlight_file(params.data, zero_based=True)
+elif params.data.endswith('.tsv'):
+    X = np.genfromtxt(params.data, delimiter='\t')
+else:
+    ValueError(f"unknown data file type: 'f{params.data}''")
 logging.info(f'load test data: {X.shape}')
 
 ytrue = np.genfromtxt(params.true)
