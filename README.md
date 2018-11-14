@@ -16,7 +16,7 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
     * support parallel predictions for batches
   * Support LightGBM ([repo](https://github.com/Microsoft/LightGBM)) models:
     * read models from text format
-    * support `gbdt` and `rf` (random forest) models
+    * support `gbdt`, `rf` (random forest) and `dart` models
     * support multiclass predictions
     * addition optimizations for categorical features (for example, _one hot_ decision rule)
     * addition optimizations exploiting only prediction usage
