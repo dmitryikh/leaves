@@ -183,3 +183,6 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
 
 ## Iris for LightGBM Random Forest
   1. run testdata/iris_lightgbm_rf.py
+
+## Breast Cancer for LightGBM DART model
+  1. run testdata/lg_dart_breast_cancer.py
