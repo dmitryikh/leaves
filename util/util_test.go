@@ -151,3 +151,26 @@ func TestReadParams(t *testing.T) {
 		}
 	}
 }
+
+func TestConstructBitset(t *testing.T) {
+	bitset := ConstructBitset([]int{0})
+
+	check := func(trueAnswer []uint32) {
+		if len(trueAnswer) != len(bitset) {
+			t.Errorf("wrong length. expected %d, got %d", len(trueAnswer), len(bitset))
+		}
+		for i, v := range trueAnswer {
+			if v != bitset[i] {
+				t.Errorf("wrong %d-th value. expected %d, got %d", i, v, bitset[i])
+			}
+		}
+	}
+
+	check([]uint32{1})
+
+	bitset = ConstructBitset([]int{33, 65, 105})
+	check([]uint32{0, 2, 2, 512})
+
+	bitset = ConstructBitset([]int{})
+	check([]uint32{})
+}
