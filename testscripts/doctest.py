@@ -8,6 +8,72 @@ import shutil
 import sys
 import tempfile
 
+"""
+`doctest.py` is dedicated to extract code blocks (programs) from Go package
+documentation, execute them and optionally chek program outputs. `doctest.py` has several
+advantages in comparison with Go's "whole file example" (https://blog.golang.org/examples):
+    1. Code blocks can be in differnt languages. Code blocks should be standalone programs
+    2. Programs can have side effect (for example, produce files)
+
+These programs are run in order of occurrence in doc file.
+
+Whole doc text splitted into paragraphs - blocks of text separated by empty line.
+
+Code blocks are exctracted from list of paragraphs by the next rules:
+    1. The paragraph before code blocks should contain code filename
+    2. Based on code filename extension the language will be defined
+    3. Code blocks are consecutive paragraphs where each line starts with '\t'.
+    4. If after code blocks there is paragraph with substring 'output:' and
+        the paragraph after it starts with '\t' then the paragraph treats as
+        program output to check with
+
+
+Example, doc.go file:
+/*
+Some package description
+
+run_first.py
+
+	with open('file.txt', 'w') as fout:
+	    fout.write('1\n')
+
+Here is some paragprah.. with some useful information.
+
+Let's try to read the file in go
+
+run_second.go
+
+	package main
+
+	import (
+		"fmt"
+		"os"
+	)
+
+	func main() {
+		reader, err := os.Open("file.txt")
+		if err != nil {
+			panic(err)
+		}
+		defer reader.Close()
+		buffer := make([]byte, 1024)
+		n, err := reader.Read(buffer)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s", string(buffer[:n]))
+	}
+
+Output:
+
+	1
+
+Here is the end of the documentation
+
+*/
+package main
+
+"""
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
                     format='%(asctime)s (%(name)s) [%(levelname)s]: '
@@ -22,7 +88,7 @@ class Paragraph:
         self.text = text
 
 
-class Script:
+class Program:
     def  __init__(self, line_start=None, line_end=None, code='', language=None, filename=None, output=None):
         self.line_start = line_start
         self.line_end = line_end
@@ -35,45 +101,45 @@ class Script:
 def parse_args():
     parser = argparse.ArgumentParser(description='run programs from go package documentation')
     parser.add_argument('-p', '--package', type = str, required=True, help ='go package for testing')
-    parser.add_argument('-d', '--dir', type = str, default='', help ='directory where to run scripts')
+    parser.add_argument('-d', '--dir', type = str, default='', help ='directory where to run programs')
     params = parser.parse_args()
     return params
 
 
-def execute_python_script(script):
-    logger.info(f'Run {script.filename}')
-    with open(script.filename, 'w', encoding='utf-8') as fout:
-        fout.write(script.code)
-    execute_check_output(['python', script.filename], script.output)
+def execute_python(program):
+    logger.info(f'Run {program.filename}')
+    with open(program.filename, 'w', encoding='utf-8') as fout:
+        fout.write(program.code)
+    execute_check_output(['python', program.filename], program.output)
 
 
-def execute_go_script(script):
-    with open(script.filename, 'w', encoding='utf-8') as fout:
-        fout.write(script.code)
+def execute_go(program):
+    with open(program.filename, 'w', encoding='utf-8') as fout:
+        fout.write(program.code)
 
-    logger.info(f'Build {script.filename}')
-    execute_wrapper(['go', 'build', script.filename])
+    logger.info(f'Build {program.filename}')
+    execute_wrapper(['go', 'build', program.filename])
 
-    executable_filename = script.filename[:-3]
+    executable_filename = program.filename[:-3]
     if not os.path.isfile(executable_filename):
         raise RuntimeError(f'no executable found: {executable_filename}')
 
     logger.info(f'Run {executable_filename}')
-    execute_check_output([f'./{executable_filename}'], script.output)
+    execute_check_output([f'./{executable_filename}'], program.output)
 
 
-script_types = {
-    'py': execute_python_script,
-    'go': execute_go_script,
+program_types = {
+    'py': execute_python,
+    'go': execute_go,
 }
-filename_re = re.compile(f"\\w+\\.({'|'.join(script_types)})")
+filename_re = re.compile(f"\\w+\\.({'|'.join(program_types)})")
 
 
 @contextmanager
 def dir_changer(dirname, delete_dir):
     """
-    Context manager to do not forget change cwd back. If `delete_dir=True`
-    delete dirname after.
+    Context manager to do not forget change cwd back. Delete `dirname` after
+    if `delete_dir=True`
     """
     old_cwd = os.getcwd()
     os.chdir(dirname)
@@ -101,7 +167,7 @@ def find_doc_file(package):
 def parse_doc(doc_file):
     """
     Parse go's doc file and return list of paragraphs in documentations.
-    Consecutive code blocks are merged into single paragraph.
+    Consecutive code blocks (starts from '\t') are merged into single paragraph.
     """
     logger.info(f'Parse doc file: {doc_file}')
     doc_first_line = 0
@@ -155,14 +221,10 @@ def untab(text):
     return text.replace('\n\t', '\n')
 
 
-def extract_scripts(paragraphs):
-    """
-    Exctract scripts from list of paragraphs. The rule: paragraph before code
-    should contain script's filename, paragraphs after code with 'output:'
-    substring can contain code outputs to check with.
-    """
+def extract_code_blocks(paragraphs):
+    """Exctract code blocks from list of paragraphs"""
     i = 0
-    scripts = []
+    programs = []
     while i < len(paragraphs):
         p = paragraphs[i]
         if p.text.startswith('\t'):
@@ -172,7 +234,7 @@ def extract_scripts(paragraphs):
             if not m:
                 i += 1
                 continue
-            script = Script(
+            program = Program(
                 line_start=p.line_start,
                 line_end=p.line_end,
                 code=untab(p.text),
@@ -182,17 +244,17 @@ def extract_scripts(paragraphs):
             if i + 2 < len(paragraphs) \
                 and paragraphs[i + 1].text.lower().strip() == 'output:' \
                 and paragraphs[i + 2].text.startswith('\t'):
-                script.output = untab(paragraphs[i + 2].text)
+                program.output = untab(paragraphs[i + 2].text)
                 i += 2
-            scripts.append(script)
+            programs.append(program)
         i += 1
 
-    return scripts
+    return programs
 
 
-def execute_scripts(scripts, dirname):
+def execute_programs(programs, dirname):
     """
-    Execute scripts in `dirname`. If `dirname` is empty the temporary dir
+    Execute programs in `dirname`. If `dirname` is empty the temporary dir
     will be created and removed after.
     """
     if not dirname:
@@ -205,9 +267,9 @@ def execute_scripts(scripts, dirname):
     logger.info(f'Dir: {dirname} (delete: {delete_dir})')
 
     with dir_changer(dirname, delete_dir):
-        for script in scripts:
-            executor = script_types[script.language]
-            executor(script)
+        for program in programs:
+            executor = program_types[program.language]
+            executor(program)
 
 
 def execute_wrapper(args):
@@ -229,8 +291,8 @@ def main():
     params = parse_args()
     doc_file = find_doc_file(params.package)
     paragraphs = parse_doc(doc_file)
-    scripts = extract_scripts(paragraphs)
-    execute_scripts(scripts, params.dir)
+    programs = extract_code_blocks(paragraphs)
+    execute_programs(programs, params.dir)
 
 
 if __name__ == '__main__':
