@@ -18,3 +18,7 @@ y_pred = clf.predict(X_test, raw_score=True)
 clf.save_model('lg_dart_breast_cancer.model')  # save the model in txt format
 np.savetxt('lg_dart_breast_cancer_true_predictions.txt', y_pred)
 np.savetxt('breast_cancer_test.tsv', X_test, delimiter='\t')
+d = clf.dump_model()
+import json
+with open('lg_dart_breast_cancer.json', 'w') as fout:
+    json.dump(d, fout, indent=1)
