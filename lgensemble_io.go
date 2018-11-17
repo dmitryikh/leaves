@@ -2,12 +2,51 @@ package leaves
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/dmitryikh/leaves/util"
 )
+
+type lgEnsembleJSON struct {
+	Name                 string            `json:"name"`
+	Version              string            `json:"version"`
+	NumClasses           int               `json:"num_class"`
+	NumTreesPerIteration int               `json:"num_tree_per_iteration"`
+	MaxFeatureIdx        int               `json:"max_feature_idx"`
+	Trees                []json.RawMessage `json:"tree_info"`
+	// TODO: lightgbm should support the next fields
+	// AverageOutput bool   `json:"average_output"`
+	// Objective     string `json:"objective"`
+}
+
+type lgTreeJSON struct {
+	NumLeaves int    `json:"num_leaves"`
+	NumCat    uint32 `json:"num_cat"`
+	// Unused fields:
+	// TreeIndex uint32  `json:"tree_index"`
+	// Shrinkage float64 `json:"shrinkage"`
+	RootRaw json.RawMessage `json:"tree_structure"`
+	Root    interface{}
+}
+
+type lgNodeJSON struct {
+	SplitIndex   uint32 `json:"split_index"`
+	SplitFeature uint32 `json:"split_feature"`
+	// Threshold could be float64 (for numerical decision) or string (for categorical, example "10||100||400")
+	Threshold     interface{}     `json:"threshold"`
+	DecisionType  string          `json:"decision_type"`
+	DefaultLeft   bool            `json:"default_left"`
+	MissingType   string          `json:"missing_type"`
+	LeftChildRaw  json.RawMessage `json:"left_child"`
+	RightChildRaw json.RawMessage `json:"right_child"`
+	LeftChild     interface{}
+	RightChild    interface{}
+}
 
 func convertMissingType(decisionType uint32) (uint8, error) {
 	missingTypeOrig := (decisionType >> 2) & 3
@@ -22,6 +61,12 @@ func convertMissingType(decisionType uint32) (uint8, error) {
 		return 0, fmt.Errorf("unknown missing type = %d", missingTypeOrig)
 	}
 	return missingType, nil
+}
+
+var stringToMissingType = map[string]uint8{
+	"None": 0,
+	"Zero": missingZero,
+	"NaN":  missingNan,
 }
 
 func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
@@ -258,6 +303,7 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 	}
 	treeSizes := strings.Split(treeSizesStr, " ")
 
+	// NOTE: we rely on the fact that size of tree_sizes data is equal to number of trees
 	nTrees := len(treeSizes)
 	if nTrees == 0 {
 		return nil, fmt.Errorf("no trees in file (based on tree_sizes value)")
@@ -285,4 +331,266 @@ func LGEnsembleFromFile(filename string) (*Ensemble, error) {
 	defer reader.Close()
 	bufReader := bufio.NewReader(reader)
 	return LGEnsembleFromReader(bufReader)
+}
+
+// unmarshalNode recuirsively unmarshal nodes data in the tree from JSON raw data. Tree's node can be:
+// 1. leaf node (contains field 'field_value')
+// 2. node with decision rule (contains field from `lgNodeJSON` structure)
+func unmarshalNode(raw []byte) (interface{}, error) {
+	node := &lgNodeJSON{}
+	err := json.Unmarshal(raw, node)
+	if err != nil {
+		return nil, err
+	}
+
+	// dirty way to check that we really load a lgNodeJSON struct from raw data
+	if node.MissingType == "" {
+		// this is no tree node structure, then it should be map with "leaf_value" record
+		data := make(map[string]interface{})
+		err = json.Unmarshal(raw, &data)
+		if err != nil {
+			return nil, err
+		}
+		value, ok := data["leaf_value"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("unknown tree")
+		}
+		return value, nil
+	}
+	node.LeftChild, err = unmarshalNode(node.LeftChildRaw)
+	if err != nil {
+		return nil, err
+	}
+	node.RightChild, err = unmarshalNode(node.RightChildRaw)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+// unmarshalTree unmarshal tree data from JSON raw data and convert it to `lgTree` structure
+func unmarshalTree(raw []byte) (lgTree, error) {
+	t := lgTree{}
+
+	treeJSON := &lgTreeJSON{}
+	err := json.Unmarshal(raw, treeJSON)
+	if err != nil {
+		return t, err
+	}
+
+	t.nCategorical = treeJSON.NumCat
+	if t.nCategorical > 0 {
+		// first element set to zero for consistency
+		t.catBoundaries = make([]uint32, 1)
+	}
+
+	if treeJSON.NumLeaves < 1 {
+		return t, fmt.Errorf("num_leaves < 1")
+	}
+	numNodes := treeJSON.NumLeaves - 1
+
+	treeJSON.Root, err = unmarshalNode(treeJSON.RootRaw)
+	if err != nil {
+		return t, err
+	}
+
+	if value, ok := treeJSON.Root.(float64); ok {
+		// special case - constant value tree
+		t.leafValues = append(t.leafValues, value)
+		return t, nil
+	}
+
+	createNumericalNode := func(nodeJSON *lgNodeJSON) (lgNode, error) {
+		node := lgNode{}
+		missingType, isFound := stringToMissingType[nodeJSON.MissingType]
+		if !isFound {
+			return node, fmt.Errorf("unknown missing_type '%s'", nodeJSON.MissingType)
+		}
+		defaultType := uint8(0)
+		if nodeJSON.DefaultLeft {
+			defaultType = defaultLeft
+		}
+		threshold, ok := nodeJSON.Threshold.(float64)
+		if !ok {
+			return node, fmt.Errorf("unexpected Threshold type %T", nodeJSON.Threshold)
+		}
+		node = numericalNode(nodeJSON.SplitFeature, missingType, threshold, defaultType)
+		if value, ok := nodeJSON.LeftChild.(float64); ok {
+			node.Flags |= leftLeaf
+			node.Left = uint32(len(t.leafValues))
+			t.leafValues = append(t.leafValues, value)
+		}
+		if value, ok := nodeJSON.RightChild.(float64); ok {
+			node.Flags |= rightLeaf
+			node.Right = uint32(len(t.leafValues))
+			t.leafValues = append(t.leafValues, value)
+		}
+		return node, nil
+	}
+
+	createCategoricalNode := func(nodeJSON *lgNodeJSON) (lgNode, error) {
+		node := lgNode{}
+		missingType, isFound := stringToMissingType[nodeJSON.MissingType]
+		if !isFound {
+			return node, fmt.Errorf("unknown missing_type '%s'", nodeJSON.MissingType)
+		}
+
+		thresholdString, ok := nodeJSON.Threshold.(string)
+		if !ok {
+			return node, fmt.Errorf("unexpected Threshold type %T", nodeJSON.Threshold)
+		}
+		tokens := strings.Split(thresholdString, "||")
+
+		nBits := len(tokens)
+		catIdx := uint32(0)
+		catType := uint8(0)
+		if nBits == 0 {
+			return node, fmt.Errorf("no bits set")
+		} else if nBits == 1 {
+			value, err := strconv.Atoi(tokens[0])
+			if err != nil {
+				return node, fmt.Errorf("can't convert %s: %s", tokens[0], err.Error())
+			}
+			catIdx = uint32(value)
+			catType = catOneHot
+		} else {
+			thresholdValues := make([]int, len(tokens))
+			for i, valueStr := range tokens {
+				value, err := strconv.Atoi(valueStr)
+				if err != nil {
+					return node, fmt.Errorf("can't convert %s: %s", valueStr, err.Error())
+				}
+				thresholdValues[i] = value
+			}
+
+			bitset := util.ConstructBitset(thresholdValues)
+			if len(bitset) == 1 {
+				catIdx = bitset[0]
+				catType = catSmall
+			} else {
+				// regular case with large bitset
+				catIdx = uint32(len(t.catBoundaries) - 1)
+				t.catThresholds = append(t.catThresholds, bitset...)
+				t.catBoundaries = append(t.catBoundaries, uint32(len(t.catThresholds)))
+			}
+		}
+
+		node = categoricalNode(nodeJSON.SplitFeature, missingType, catIdx, catType)
+		if value, ok := nodeJSON.LeftChild.(float64); ok {
+			node.Flags |= leftLeaf
+			node.Left = uint32(len(t.leafValues))
+			t.leafValues = append(t.leafValues, value)
+		}
+		if value, ok := nodeJSON.RightChild.(float64); ok {
+			node.Flags |= rightLeaf
+			node.Right = uint32(len(t.leafValues))
+			t.leafValues = append(t.leafValues, value)
+		}
+		return node, nil
+	}
+	createNode := func(nodeJSON *lgNodeJSON) (lgNode, error) {
+		if nodeJSON.DecisionType == "==" {
+			return createCategoricalNode(nodeJSON)
+		} else if nodeJSON.DecisionType == "<=" {
+			return createNumericalNode(nodeJSON)
+		} else {
+			return lgNode{}, fmt.Errorf("unknown decision type '%s'", nodeJSON.DecisionType)
+		}
+	}
+
+	type StackData struct {
+		// pointer to parent's Left/RightChild field
+		parentPtr *uint32
+		nodeJSON  *lgNodeJSON
+	}
+	stack := make([]StackData, 0, numNodes)
+	if root, ok := treeJSON.Root.(*lgNodeJSON); ok {
+		stack = append(stack, StackData{nil, root})
+	} else {
+		return t, fmt.Errorf("unexpected type of Root: %T", treeJSON.Root)
+	}
+	// NOTE: we rely on fact that t.nodes won't be reallocated (`parentPtr` points to its data)
+	t.nodes = make([]lgNode, 0, numNodes)
+
+	for len(stack) > 0 {
+		stackData := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		node, err := createNode(stackData.nodeJSON)
+		if err != nil {
+			return t, err
+		}
+		if stackData.parentPtr != nil {
+			*stackData.parentPtr = uint32(len(t.nodes))
+		}
+		t.nodes = append(t.nodes, node)
+		if node.Flags&leftLeaf == 0 {
+			if left, ok := stackData.nodeJSON.LeftChild.(*lgNodeJSON); ok {
+				stack = append(stack, StackData{&t.nodes[len(t.nodes)-1].Left, left})
+			} else if _, ok := stackData.nodeJSON.LeftChild.(float64); ok {
+			} else {
+				return t, fmt.Errorf("unexpected left child type %T", stackData.nodeJSON.LeftChild)
+			}
+		}
+		if node.Flags&rightLeaf == 0 {
+			if right, ok := stackData.nodeJSON.RightChild.(*lgNodeJSON); ok {
+				stack = append(stack, StackData{&t.nodes[len(t.nodes)-1].Right, right})
+			} else if _, ok := stackData.nodeJSON.RightChild.(float64); ok {
+			} else {
+				return t, fmt.Errorf("unexpected right child type %T", stackData.nodeJSON.RightChild)
+			}
+		}
+	}
+	return t, nil
+}
+
+// LGEnsembleFromJSON reads LightGBM model from stream with JSON data
+func LGEnsembleFromJSON(reader io.Reader) (*Ensemble, error) {
+	data := &lgEnsembleJSON{}
+	dec := json.NewDecoder(reader)
+
+	err := dec.Decode(data)
+	if err != nil {
+		return nil, err
+	}
+
+	e := &lgEnsemble{name: "lightgbm.gbdt"}
+
+	if data.Name != "tree" {
+		return nil, fmt.Errorf("expected 'name' field = 'tree' (got: '%s')", data.Name)
+	}
+
+	if data.Version != "v2" {
+		return nil, fmt.Errorf("expected 'version' field = 'v2' (got: '%s')", data.Version)
+	}
+
+	if data.NumClasses != data.NumTreesPerIteration {
+		return nil, fmt.Errorf(
+			"meet case when num_class (%d) != num_tree_per_iteration (%d)",
+			data.NumClasses,
+			data.NumTreesPerIteration,
+		)
+	} else if data.NumClasses < 1 {
+		return nil, fmt.Errorf("num_class (%d) should be > 0", data.NumClasses)
+	} else if data.NumTreesPerIteration < 1 {
+		return nil, fmt.Errorf("num_tree_per_iteration (%d) should be > 0", data.NumTreesPerIteration)
+	}
+	e.nClasses = data.NumClasses
+	e.MaxFeatureIdx = data.MaxFeatureIdx
+
+	nTrees := len(data.Trees)
+	if nTrees == 0 {
+		return nil, fmt.Errorf("no trees in file (based on tree_sizes value)")
+	} else if nTrees%e.nClasses != 0 {
+		return nil, fmt.Errorf("wrong number of trees (%d) for number of class (%d)", nTrees, e.nClasses)
+	}
+
+	e.Trees = make([]lgTree, 0, nTrees)
+	for i := 0; i < nTrees; i++ {
+		tree, err := unmarshalTree(data.Trees[i])
+		if err != nil {
+			return nil, fmt.Errorf("error while reading %d tree: %s", i, err.Error())
+		}
+		e.Trees = append(e.Trees, tree)
+	}
+	return &Ensemble{e}, nil
 }

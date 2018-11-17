@@ -182,6 +182,33 @@ func NumberOfSetBits(bitset []uint32) uint32 {
 	return count
 }
 
+// ConstructBitset return a slice where bits in place of `values` are set
+func ConstructBitset(values []int) []uint32 {
+	if len(values) == 0 {
+		return nil
+	}
+	max := values[0]
+	for _, v := range values {
+		if v > max {
+			max = v
+		}
+	}
+	max++
+
+	nBitsetValues := max / 32
+	if max%32 != 0 {
+		nBitsetValues++
+	}
+
+	bitset := make([]uint32, nBitsetValues)
+	for _, v := range values {
+		i1 := v / 32
+		i2 := v % 32
+		bitset[i1] |= 1 << uint32(i2)
+	}
+	return bitset
+}
+
 func AlmostEqualFloat64(a, b, threshold float64) bool {
 	return math.Abs(a-b) <= threshold
 }
