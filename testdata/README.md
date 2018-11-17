@@ -196,7 +196,7 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
     python iris_lightgbm_rf.py
   ```
 
-## Breast Cancer for LightGBM DART model
+## Breast Cancer for LightGBM DART model (+ JSON format model)
   1. run
   ```sh
     cd testdata
