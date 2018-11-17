@@ -1,0 +1,57 @@
+{
+ "name": "tree",
+ "version": "v2",
+ "num_class": 1,
+ "num_tree_per_iteration": 1,
+ "label_index": 0,
+ "max_feature_idx": 1,
+ "feature_names": [
+  "Column_0",
+  "Column_1"
+ ],
+ "tree_info": [
+  {
+   "tree_index": 0,
+   "num_leaves": 3,
+   "num_cat": 1,
+   "shrinkage": 1,
+   "tree_structure": {
+    "split_index": 0,
+    "split_feature": 0,
+    "split_gain": 312.09600830078125,
+    "threshold": 0.14,
+    "decision_type": "<=",
+    "default_left": true,
+    "missing_type": "None",
+    "internal_value": 0,
+    "internal_count": 455,
+    "left_child": {
+     "split_index": 1,
+     "split_feature": 1,
+     "split_gain": 44.737098693847656,
+     "threshold": "1||10||100",
+     "decision_type": "==",
+     "default_left": true,
+     "missing_type": "None",
+     "internal_value": 1.17818,
+     "internal_count": 310,
+     "left_child": {
+      "leaf_index": 0,
+      "leaf_value": 0.4703,
+      "leaf_count": 38
+     },
+     "right_child": {
+      "leaf_index": 1,
+      "leaf_value": 0.4242,
+      "leaf_count": 38
+     }
+    },
+    "right_child": {
+      "leaf_index": 3,
+      "leaf_value": 1.1111,
+      "leaf_count": 38
+    }
+   }
+  }
+ ]
+}
