@@ -225,3 +225,75 @@ func TestLGEnsemble(t *testing.T) {
 		t.Fatalf("predictions on dense not correct (all trees): %s", err.Error())
 	}
 }
+
+func TestLGEnsembleJSON1tree1leaf(t *testing.T) {
+	modelPath := filepath.Join("testdata", "lg_1tree_1leaf.json")
+	// loading model
+	modelFile, err := os.Open(modelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer modelFile.Close()
+	model, err := LGEnsembleFromJSON(modelFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if model.NEstimators() != 1 {
+		t.Fatalf("expected 1 trees (got %d)", model.NEstimators())
+	}
+
+	if model.NClasses() != 1 {
+		t.Fatalf("expected 1 class (got %d)", model.NClasses())
+	}
+
+	if model.NFeatures() != 41 {
+		t.Fatalf("expected 41 class (got %d)", model.NFeatures())
+	}
+
+	features := make([]float64, model.NFeatures())
+	pred := model.PredictSingle(features, 0)
+	if pred != 0.42 {
+		t.Fatalf("expected prediction 0.42 (got %f)", pred)
+	}
+}
+
+func TestLGEnsembleJSON1tree(t *testing.T) {
+	modelPath := filepath.Join("testdata", "lg_1tree.json")
+	// loading model
+	modelFile, err := os.Open(modelPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer modelFile.Close()
+	model, err := LGEnsembleFromJSON(modelFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if model.NEstimators() != 1 {
+		t.Fatalf("expected 1 trees (got %d)", model.NEstimators())
+	}
+
+	if model.NClasses() != 1 {
+		t.Fatalf("expected 1 class (got %d)", model.NClasses())
+	}
+
+	if model.NFeatures() != 2 {
+		t.Fatalf("expected 2 class (got %d)", model.NFeatures())
+	}
+
+	check := func(features []float64, trueAnswer float64) {
+		pred := model.PredictSingle(features, 0)
+		if pred != trueAnswer {
+			t.Fatalf("expected prediction %f (got %f)", trueAnswer, pred)
+		}
+	}
+
+	check([]float64{0.0, 0.0}, 0.4242)
+	check([]float64{0.0, 11.0}, 0.4242)
+	check([]float64{0.13, 11.0}, 0.4242)
+	check([]float64{0.0, 1.0}, 0.4703)
+	check([]float64{0.0, 10.0}, 0.4703)
+	check([]float64{0.0, 100.0}, 0.4703)
+	check([]float64{0.15, 0.0}, 1.1111)
+	check([]float64{0.15, 11.0}, 1.1111)
+}

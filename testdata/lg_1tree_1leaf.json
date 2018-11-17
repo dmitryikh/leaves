@@ -1,0 +1,22 @@
+{
+ "name": "tree",
+ "version": "v2",
+ "num_class": 1,
+ "num_tree_per_iteration": 1,
+ "label_index": 0,
+ "max_feature_idx": 40,
+ "feature_names": [
+  "Column_0"
+ ],
+ "tree_info": [
+  {
+   "tree_index": 0,
+   "num_leaves": 1,
+   "num_cat": 0,
+   "shrinkage": 10,
+   "tree_structure": {
+    "leaf_value": 0.42
+   }
+  }
+ ]
+}
