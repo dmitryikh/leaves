@@ -126,9 +126,9 @@ func SKEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 		return nil, fmt.Errorf("error while parsing gradient boosting class: %s", err.Error())
 	}
 
-	e.nClasses = gbdt.NClasses
-	if e.nClasses == 2 {
-		e.nClasses = 1
+	e.nRawOutputGroups = gbdt.NClasses
+	if e.nRawOutputGroups == 2 {
+		e.nRawOutputGroups = 1
 	}
 
 	e.MaxFeatureIdx = gbdt.MaxFeatures - 1
@@ -138,14 +138,14 @@ func SKEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 		return nil, fmt.Errorf("no trees in file")
 	}
 
-	if gbdt.NEstimators*e.nClasses != len(gbdt.Estimators) {
-		return nil, fmt.Errorf("unexpected number of trees (NEstimators = %d, nClasses = %d, len(Estimatoers) = %d", gbdt.NEstimators, e.nClasses, len(gbdt.Estimators))
+	if gbdt.NEstimators*e.nRawOutputGroups != len(gbdt.Estimators) {
+		return nil, fmt.Errorf("unexpected number of trees (NEstimators = %d, nRawOutputGroups = %d, len(Estimatoers) = %d", gbdt.NEstimators, e.nRawOutputGroups, len(gbdt.Estimators))
 	}
 
 	scale := gbdt.LearningRate
-	base := make([]float64, e.nClasses)
+	base := make([]float64, e.nRawOutputGroups)
 	if gbdt.InitEstimator.Name == "LogOddsEstimator" {
-		for i := 0; i < e.nClasses; i++ {
+		for i := 0; i < e.nRawOutputGroups; i++ {
 			base[i] = gbdt.InitEstimator.Prior[0]
 		}
 	} else if gbdt.InitEstimator.Name == "PriorProbabilityEstimator" {
@@ -159,8 +159,8 @@ func SKEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 
 	e.Trees = make([]lgTree, 0, gbdt.NEstimators*gbdt.NClasses)
 	for i := 0; i < gbdt.NEstimators; i++ {
-		for j := 0; j < e.nClasses; j++ {
-			treeNum := i*e.nClasses + j
+		for j := 0; j < e.nRawOutputGroups; j++ {
+			treeNum := i*e.nRawOutputGroups + j
 			tree, err := lgTreeFromSklearnDecisionTreeRegressor(gbdt.Estimators[treeNum], scale, base[j])
 			if err != nil {
 				return nil, fmt.Errorf("error while creating %d tree: %s", treeNum, err.Error())

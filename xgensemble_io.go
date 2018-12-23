@@ -201,7 +201,7 @@ func XGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 	// 	return nil, fmt.Errorf("header number of class and model number of class should be the same (%d != %d)",
 	// 		header.Param.NumClass, origModel.Param.NumOutputGroup)
 	// }
-	e.nClasses = int(origModel.Param.NumOutputGroup)
+	e.nRawOutputGroups = int(origModel.Param.NumOutputGroup)
 	if origModel.Param.NumRoots != 1 {
 		return nil, fmt.Errorf("support only trees with 1 root (got %d)", origModel.Param.NumRoots)
 	}

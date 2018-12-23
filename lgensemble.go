@@ -6,9 +6,9 @@ import (
 
 // lgEnsemble is LightGBM model (ensemble of trees)
 type lgEnsemble struct {
-	Trees         []lgTree
-	MaxFeatureIdx int
-	nClasses      int
+	Trees            []lgTree
+	MaxFeatureIdx    int
+	nRawOutputGroups int
 	// lgEnsemble suits for different models from different packages (ex., LightGBM gbrt & sklearn gbrt)
 	// name contains the origin of the model
 	name string
@@ -19,11 +19,11 @@ type lgEnsemble struct {
 }
 
 func (e *lgEnsemble) NEstimators() int {
-	return len(e.Trees) / e.nClasses
+	return len(e.Trees) / e.nRawOutputGroups
 }
 
-func (e *lgEnsemble) NClasses() int {
-	return e.nClasses
+func (e *lgEnsemble) NRawOutputGroups() int {
+	return e.nRawOutputGroups
 }
 
 func (e *lgEnsemble) NFeatures() int {
@@ -38,7 +38,7 @@ func (e *lgEnsemble) Name() string {
 }
 
 func (e *lgEnsemble) predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
-	for k := 0; k < e.nClasses; k++ {
+	for k := 0; k < e.nRawOutputGroups; k++ {
 		predictions[startIndex+k] = 0.0
 	}
 	coef := 1.0
@@ -46,8 +46,8 @@ func (e *lgEnsemble) predictInner(fvals []float64, nEstimators int, predictions 
 		coef = 1.0 / float64(nEstimators)
 	}
 	for i := 0; i < nEstimators; i++ {
-		for k := 0; k < e.nClasses; k++ {
-			predictions[startIndex+k] += e.Trees[i*e.nClasses+k].predict(fvals) * coef
+		for k := 0; k < e.nRawOutputGroups; k++ {
+			predictions[startIndex+k] += e.Trees[i*e.nRawOutputGroups+k].predict(fvals) * coef
 		}
 	}
 }
