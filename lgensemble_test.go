@@ -190,7 +190,7 @@ func TestLGTreeLeaves3(t *testing.T) {
 
 func TestLGEnsemble(t *testing.T) {
 	path := filepath.Join("testdata", "model_simple.txt")
-	model, err := LGEnsembleFromFile(path)
+	model, err := LGEnsembleFromFile(path, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestLGEnsembleJSON1tree1leaf(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer modelFile.Close()
-	model, err := LGEnsembleFromJSON(modelFile)
+	model, err := LGEnsembleFromJSON(modelFile, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestLGEnsembleJSON1tree(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer modelFile.Close()
-	model, err := LGEnsembleFromJSON(modelFile)
+	model, err := LGEnsembleFromJSON(modelFile, false)
 	if err != nil {
 		t.Fatal(err)
 	}

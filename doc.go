@@ -55,7 +55,7 @@ predict_breast_cancer_model.go:
 		}
 
 		// loading model
-		model, err := leaves.LGEnsembleFromFile("lg_breast_cancer.model")
+		model, err := leaves.LGEnsembleFromFile("lg_breast_cancer.model", false)
 		if err != nil {
 			panic(err)
 		}
@@ -140,7 +140,7 @@ predict_iris_model.go:
 		}
 
 		// loading model
-		model, err := leaves.XGEnsembleFromFile("xg_iris.model")
+		model, err := leaves.XGEnsembleFromFile("xg_iris.model", false)
 		if err != nil {
 			panic(err)
 		}

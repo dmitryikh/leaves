@@ -54,7 +54,7 @@ func InnerTestLGMSLTR(t *testing.T, nThreads int) {
 		t.Fatal(err)
 	}
 
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestLGHiggs(t *testing.T) {
 	modelPath := filepath.Join("testdata", "lghiggs.model")
 	skipTestIfFileNotExist(t, truePath, modelPath)
 
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatalf("fail loading model %s: %s", modelPath, err.Error())
 	}
@@ -104,7 +104,7 @@ func TestXGHiggs(t *testing.T) {
 	skipTestIfFileNotExist(t, truePath, modelPath)
 
 	// loading model
-	model, err := XGEnsembleFromFile(modelPath)
+	model, err := XGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatalf("fail loading model %s: %s", modelPath, err.Error())
 	}
@@ -212,7 +212,7 @@ func InnerBenchmarkLGMSLTR(b *testing.B, nThreads int) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func InnerBenchmarkLGMSLTR(b *testing.B, nThreads int) {
 func BenchmarkLGHiggs_dense_1thread(b *testing.B) {
 	modelPath := filepath.Join("testdata", "lghiggs.model")
 	skipBenchmarkIfFileNotExist(b, modelPath)
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func BenchmarkLGHiggs_dense_1thread(b *testing.B) {
 func BenchmarkLGHiggs_dense_4thread(b *testing.B) {
 	modelPath := filepath.Join("testdata", "lghiggs.model")
 	skipBenchmarkIfFileNotExist(b, modelPath)
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -248,7 +248,7 @@ func BenchmarkLGHiggs_dense_4thread(b *testing.B) {
 func BenchmarkLGHiggs_csr_1thread(b *testing.B) {
 	modelPath := filepath.Join("testdata", "lghiggs.model")
 	skipBenchmarkIfFileNotExist(b, modelPath)
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func BenchmarkLGHiggs_csr_1thread(b *testing.B) {
 func BenchmarkLGHiggs_csr_4thread(b *testing.B) {
 	modelPath := filepath.Join("testdata", "lghiggs.model")
 	skipBenchmarkIfFileNotExist(b, modelPath)
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -287,7 +287,7 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 
 	// loading model
 	path = filepath.Join("testdata", "xgagaricus.model")
-	model, err := XGEnsembleFromFile(path)
+	model, err := XGEnsembleFromFile(path, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func InnerTestXGBLinAgaricus(t *testing.T, nThreads int) {
 
 	// loading model
 	path = filepath.Join("testdata", "xgblin_agaricus.model")
-	model, err := XGBLinearFromFile(path)
+	model, err := XGBLinearFromFile(path, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +366,7 @@ func InnerTestXGBLinAgaricus(t *testing.T, nThreads int) {
 }
 
 func BenchmarkXGHiggs_dense_1thread(b *testing.B) {
-	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"))
+	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"), false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -374,7 +374,7 @@ func BenchmarkXGHiggs_dense_1thread(b *testing.B) {
 }
 
 func BenchmarkXGHiggs_dense_4thread(b *testing.B) {
-	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"))
+	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"), false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -382,7 +382,7 @@ func BenchmarkXGHiggs_dense_4thread(b *testing.B) {
 }
 
 func BenchmarkXGHiggs_csr_1thread(b *testing.B) {
-	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"))
+	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"), false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -390,7 +390,7 @@ func BenchmarkXGHiggs_csr_1thread(b *testing.B) {
 }
 
 func BenchmarkXGHiggs_csr_4thread(b *testing.B) {
-	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"))
+	model, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"), false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -452,7 +452,7 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +493,7 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 
 func BenchmarkHiggsLoading(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"))
+		_, err := XGEnsembleFromFile(filepath.Join("testdata", "xghiggs.model"), false)
 		if err != nil {
 			b.Skip(err.Error())
 		}
@@ -519,7 +519,7 @@ func InnerTestXGDermatology(t *testing.T, nThreads int) {
 	}
 
 	// loading model
-	model, err := XGEnsembleFromFile(modelPath)
+	model, err := XGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -627,7 +627,7 @@ func TestLGRandomForestIris(t *testing.T) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -663,7 +663,7 @@ func TestXGDARTAgaricus(t *testing.T) {
 
 	// loading model
 	path = filepath.Join("testdata", "xg_dart_agaricus.model")
-	model, err := XGEnsembleFromFile(path)
+	model, err := XGEnsembleFromFile(path, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -702,7 +702,7 @@ func TestLGDARTBreastCancer(t *testing.T) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -741,7 +741,7 @@ func TestLGKDDCup99(t *testing.T) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -783,7 +783,7 @@ func InnerBenchmarkLGKDDCup99(b *testing.B, nThreads int) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	model, err := LGEnsembleFromFile(modelPath)
+	model, err := LGEnsembleFromFile(modelPath, false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -814,7 +814,7 @@ func TestLGJsonBreastCancer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer modelFile.Close()
-	model, err := LGEnsembleFromJSON(modelFile)
+	model, err := LGEnsembleFromJSON(modelFile, false)
 	if err != nil {
 		t.Fatal(err)
 	}

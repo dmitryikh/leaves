@@ -259,8 +259,13 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 }
 
 // LGEnsembleFromReader reads LightGBM model from `reader`
-func LGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
+func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensemble, error) {
 	e := &lgEnsemble{name: "lightgbm.gbdt"}
+
+	if loadTransformation {
+		return nil, fmt.Errorf("transformation functions are not supported for LightGBM models")
+	}
+
 	params, err := util.ReadParamsUntilBlank(reader)
 	if err != nil {
 		return nil, err
@@ -323,14 +328,14 @@ func LGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 }
 
 // LGEnsembleFromFile reads LightGBM model from binary file
-func LGEnsembleFromFile(filename string) (*Ensemble, error) {
+func LGEnsembleFromFile(filename string, loadTransformation bool) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
 	bufReader := bufio.NewReader(reader)
-	return LGEnsembleFromReader(bufReader)
+	return LGEnsembleFromReader(bufReader, loadTransformation)
 }
 
 // unmarshalNode recuirsively unmarshal nodes data in the tree from JSON raw data. Tree's node can be:
@@ -544,8 +549,13 @@ func unmarshalTree(raw []byte) (lgTree, error) {
 }
 
 // LGEnsembleFromJSON reads LightGBM model from stream with JSON data
-func LGEnsembleFromJSON(reader io.Reader) (*Ensemble, error) {
+func LGEnsembleFromJSON(reader io.Reader, loadTransformation bool) (*Ensemble, error) {
 	data := &lgEnsembleJSON{}
+
+	if loadTransformation {
+		return nil, fmt.Errorf("transformation functions are not supported for LightGBM models")
+	}
+
 	dec := json.NewDecoder(reader)
 
 	err := dec.Decode(data)

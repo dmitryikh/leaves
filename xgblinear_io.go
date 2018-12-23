@@ -9,8 +9,12 @@ import (
 )
 
 // XGBLinearFromReader reads  XGBoost's 'gblinear' model from `reader`
-func XGBLinearFromReader(reader *bufio.Reader) (*Ensemble, error) {
+func XGBLinearFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensemble, error) {
 	e := &xgLinear{}
+
+	if loadTransformation {
+		return nil, fmt.Errorf("transformation functions are not supported for XGBoost models")
+	}
 
 	// reading header info
 	header, err := xgbin.ReadModelHeader(reader)
@@ -35,12 +39,12 @@ func XGBLinearFromReader(reader *bufio.Reader) (*Ensemble, error) {
 }
 
 // XGBLinearFromFile reads XGBoost's 'gblinear' model from binary file
-func XGBLinearFromFile(filename string) (*Ensemble, error) {
+func XGBLinearFromFile(filename string, loadTransformation bool) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
 	bufReader := bufio.NewReader(reader)
-	return XGBLinearFromReader(bufReader)
+	return XGBLinearFromReader(bufReader, loadTransformation)
 }
