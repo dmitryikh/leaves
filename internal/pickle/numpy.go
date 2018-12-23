@@ -71,7 +71,7 @@ func (a *NumpyArrayRaw) Build(build Build) (err error) {
 
 	switch x := args[4].(type) {
 	case Build, Reduce:
-		// if we've got Build or Reduce objects we have a deal with plaint data stored in raw byte array
+		// if we've got Build or Reduce objects we have a deal with plain data stored in raw byte array
 		err = ParseClass(&a.Data, args[4])
 	case List:
 		// sometimes we've got data stored as python list (for array of python objects)
