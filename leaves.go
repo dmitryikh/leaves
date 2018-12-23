@@ -12,7 +12,7 @@ const BatchSize = 16
 
 type ensembleBaseInterface interface {
 	NEstimators() int
-	NClasses() int
+	NRawOutputGroups() int
 	NFeatures() int
 	Name() string
 	adjustNEstimators(nEstimators int) int
@@ -32,7 +32,7 @@ type Ensemble struct {
 // function transformation and etc)
 // NOTE: for multiclass prediction use Predict
 func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
-	if e.NClasses() != 1 {
+	if e.NRawOutputGroups() != 1 {
 		return 0.0
 	}
 	if e.NFeatures() > len(fvals) {
@@ -51,8 +51,8 @@ func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
 // NOTE: for single class predictions one can use simplified function PredictSingle
 func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float64) error {
 	nRows := 1
-	if len(predictions) < e.NClasses()*nRows {
-		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NClasses()*nRows)
+	if len(predictions) < e.NRawOutputGroups()*nRows {
+		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NRawOutputGroups()*nRows)
 	}
 	if e.NFeatures() > len(fvals) {
 		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
@@ -72,8 +72,8 @@ func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float
 // Note, `predictions` slice should be properly allocated on call side
 func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nEstimators int, nThreads int) error {
 	nRows := len(indptr) - 1
-	if len(predictions) < e.NClasses()*nRows {
-		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NClasses()*nRows)
+	if len(predictions) < e.NRawOutputGroups()*nRows {
+		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NRawOutputGroups()*nRows)
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
@@ -136,7 +136,7 @@ func (e *Ensemble) predictCSRInner(
 				fvals[cols[j]] = vals[j]
 			}
 		}
-		e.predictInner(fvals, nEstimators, predictions, i*e.NClasses())
+		e.predictInner(fvals, nEstimators, predictions, i*e.NRawOutputGroups())
 		e.resetFVals(fvals)
 	}
 }
@@ -156,8 +156,8 @@ func (e *Ensemble) PredictDense(
 	nThreads int,
 ) error {
 	nRows := nrows
-	if len(predictions) < e.NClasses()*nRows {
-		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NClasses()*nRows)
+	if len(predictions) < e.NRawOutputGroups()*nRows {
+		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NRawOutputGroups()*nRows)
 	}
 	if ncols == 0 || e.NFeatures() > ncols {
 		return fmt.Errorf("incorrect number of columns")
@@ -166,7 +166,7 @@ func (e *Ensemble) PredictDense(
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		// single thread calculations
 		for i := 0; i < nRows; i++ {
-			e.predictInner(vals[i*ncols:(i+1)*ncols], nEstimators, predictions, i*e.NClasses())
+			e.predictInner(vals[i*ncols:(i+1)*ncols], nEstimators, predictions, i*e.NRawOutputGroups())
 		}
 		return nil
 	}
@@ -190,7 +190,7 @@ func (e *Ensemble) PredictDense(
 					endIndex = nRows
 				}
 				for i := startIndex; i < endIndex; i++ {
-					e.predictInner(vals[i*int(ncols):(i+1)*int(ncols)], nEstimators, predictions, i*e.NClasses())
+					e.predictInner(vals[i*int(ncols):(i+1)*int(ncols)], nEstimators, predictions, i*e.NRawOutputGroups())
 				}
 			}
 		}()
@@ -205,14 +205,16 @@ func (e *Ensemble) PredictDense(
 	return nil
 }
 
-// NEstimators returns number of estimators (trees) in ensemble (per class)
+// NEstimators returns number of estimators (trees) in ensemble (per group)
 func (e *Ensemble) NEstimators() int {
 	return e.ensembleBaseInterface.NEstimators()
 }
 
-// NClasses returns number of classes to predict
-func (e *Ensemble) NClasses() int {
-	return e.ensembleBaseInterface.NClasses()
+// NRawOutputGroups returns number of groups (numbers) in every object
+// predictions. For example binary logistic model will give 1, but 4-class
+// prediction model will give 4 numbers per object
+func (e *Ensemble) NRawOutputGroups() int {
+	return e.ensembleBaseInterface.NRawOutputGroups()
 }
 
 // NFeatures returns number of features in the model

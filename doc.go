@@ -61,7 +61,7 @@ predict_breast_cancer_model.go:
 		}
 		fmt.Printf("Name: %s\n", model.Name())
 		fmt.Printf("NFeatures: %d\n", model.NFeatures())
-		fmt.Printf("NClasses: %d\n", model.NClasses())
+		fmt.Printf("NRawOutputGroups: %d\n", model.NRawOutputGroups())
 		fmt.Printf("NEstimators: %d\n", model.NEstimators())
 
 		// loading true predictions as DenseMat
@@ -71,7 +71,7 @@ predict_breast_cancer_model.go:
 		}
 
 		// preallocate slice to store model predictions
-		predictions := make([]float64, test.Rows*model.NClasses())
+		predictions := make([]float64, test.Rows*model.NRawOutputGroups())
 		// do predictions
 		model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
 		// compare results
@@ -86,7 +86,7 @@ Output:
 
 	Name: lightgbm.gbdt
 	NFeatures: 30
-	NClasses: 1
+	NRawOutputGroups: 1
 	NEstimators: 30
 	Predictions the same!
 
@@ -146,7 +146,7 @@ predict_iris_model.go:
 		}
 		fmt.Printf("Name: %s\n", model.Name())
 		fmt.Printf("NFeatures: %d\n", model.NFeatures())
-		fmt.Printf("NClasses: %d\n", model.NClasses())
+		fmt.Printf("NRawOutputGroups: %d\n", model.NRawOutputGroups())
 		fmt.Printf("NEstimators: %d\n", model.NEstimators())
 
 		// loading true predictions as DenseMat
@@ -156,7 +156,7 @@ predict_iris_model.go:
 		}
 
 		// preallocate slice to store model predictions
-		predictions := make([]float64, csr.Rows()*model.NClasses())
+		predictions := make([]float64, csr.Rows()*model.NRawOutputGroups())
 		// do predictions
 		model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, 1)
 		// compare results
@@ -177,7 +177,7 @@ Output:
 
 	Name: xgboost.gbtree
 	NFeatures: 4
-	NClasses: 3
+	NRawOutputGroups: 3
 	NEstimators: 5
 	Predictions the same! (mismatch = 0)
 

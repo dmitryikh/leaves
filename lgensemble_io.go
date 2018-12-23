@@ -289,7 +289,7 @@ func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 	} else if nTreePerIteration < 1 {
 		return nil, fmt.Errorf("num_tree_per_iteration (%d) should be > 0", nTreePerIteration)
 	}
-	e.nClasses = nClasses
+	e.nRawOutputGroups = nClasses
 
 	maxFeatureIdx, err := params.ToInt("max_feature_idx")
 	if err != nil {
@@ -312,8 +312,8 @@ func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 	nTrees := len(treeSizes)
 	if nTrees == 0 {
 		return nil, fmt.Errorf("no trees in file (based on tree_sizes value)")
-	} else if nTrees%e.nClasses != 0 {
-		return nil, fmt.Errorf("wrong number of trees (%d) for number of class (%d)", nTrees, e.nClasses)
+	} else if nTrees%e.nRawOutputGroups != 0 {
+		return nil, fmt.Errorf("wrong number of trees (%d) for number of class (%d)", nTrees, e.nRawOutputGroups)
 	}
 
 	e.Trees = make([]lgTree, 0, nTrees)
@@ -584,14 +584,14 @@ func LGEnsembleFromJSON(reader io.Reader, loadTransformation bool) (*Ensemble, e
 	} else if data.NumTreesPerIteration < 1 {
 		return nil, fmt.Errorf("num_tree_per_iteration (%d) should be > 0", data.NumTreesPerIteration)
 	}
-	e.nClasses = data.NumClasses
+	e.nRawOutputGroups = data.NumClasses
 	e.MaxFeatureIdx = data.MaxFeatureIdx
 
 	nTrees := len(data.Trees)
 	if nTrees == 0 {
 		return nil, fmt.Errorf("no trees in file (based on tree_sizes value)")
-	} else if nTrees%e.nClasses != 0 {
-		return nil, fmt.Errorf("wrong number of trees (%d) for number of class (%d)", nTrees, e.nClasses)
+	} else if nTrees%e.nRawOutputGroups != 0 {
+		return nil, fmt.Errorf("wrong number of trees (%d) for number of class (%d)", nTrees, e.nRawOutputGroups)
 	}
 
 	e.Trees = make([]lgTree, 0, nTrees)
