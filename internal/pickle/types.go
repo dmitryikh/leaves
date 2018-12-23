@@ -30,7 +30,7 @@ type Reduce struct {
 	Args     Tuple
 }
 
-// Build is result of BUILD pickle command (usualli class __setstate__ call)
+// Build is result of BUILD pickle command (usually class __setstate__ call)
 type Build struct {
 	Object interface{}
 	// Args are usually represented like Tuple (arguments for custom __setstate__) or Dict (class members)
