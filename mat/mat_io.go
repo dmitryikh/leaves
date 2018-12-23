@@ -241,3 +241,47 @@ func readFromCsv(reader *bufio.Reader,
 	}
 	return nil
 }
+
+// WriteStr writes matrix to CSV like format with field delimiter `delimiter`
+func (m *DenseMat) WriteStr(writer io.Writer, delimiter string) error {
+	if m.Cols*m.Rows != len(m.Values) {
+		return fmt.Errorf("matrix unconsistent")
+	}
+	if m.Cols == 0 || m.Rows == 0 {
+		_, err := fmt.Fprint(writer, "\n")
+		return err
+	}
+
+	for i := 0; i < m.Rows; i++ {
+		for j := 0; j < m.Cols; j++ {
+			_, err := fmt.Fprintf(writer, "%.19g", m.Values[i*m.Cols+j])
+			if err != nil {
+				return err
+			}
+			if j != m.Cols-1 {
+				_, err := fmt.Fprint(writer, delimiter)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		_, err := fmt.Fprint(writer, "\n")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ToCsvFile writes matrix to CSV like file
+func (m *DenseMat) ToCsvFile(filename string, delimiter string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	buf := bufio.NewWriter(f)
+	defer buf.Flush()
+	return m.WriteStr(buf, delimiter)
+}
