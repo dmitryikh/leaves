@@ -74,6 +74,10 @@ In order to use XGBoost model, just change `leaves.LGEnsembleFromFile`, to `leav
 
 Documentation is hosted on godoc ([link](https://godoc.org/github.com/dmitryikh/leaves)). Documentation contains complex usage examples and full API reference. Some additional information about usage examples can be found in [leaves_test.go](leaves_test.go).
 
+## Compatibility
+
+Most _leaves_ features are tested to be compatible with old and coming versions of GBRT libraries. In [compatibility.md](compatibility.md) one can found detailed report about _leaves_ correctness against different versions of external GBRT libraries.
+
 Some additional information on new features and backward compatibility can be found in [NOTES.md](NOTES.md).
 
 ## Benchmark
