@@ -132,8 +132,12 @@ func xgTreeFromTreeModel(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree,
 }
 
 // XGEnsembleFromReader reads XGBoost model from `reader`. Works with 'gbtree' and 'dart' models
-func XGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
+func XGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensemble, error) {
 	e := &xgEnsemble{}
+
+	if loadTransformation {
+		return nil, fmt.Errorf("transformation functions are not supported for XGBoost models")
+	}
 
 	// reading header info
 	header, err := xgbin.ReadModelHeader(reader)
@@ -224,12 +228,12 @@ func XGEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 }
 
 // XGEnsembleFromFile reads XGBoost model from binary file. Works with 'gbtree' and 'dart' models
-func XGEnsembleFromFile(filename string) (*Ensemble, error) {
+func XGEnsembleFromFile(filename string, loadTransformation bool) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
 	bufReader := bufio.NewReader(reader)
-	return XGEnsembleFromReader(bufReader)
+	return XGEnsembleFromReader(bufReader, loadTransformation)
 }
