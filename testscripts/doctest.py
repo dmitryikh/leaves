@@ -1,12 +1,11 @@
 import argparse
-from contextlib import contextmanager
 import logging
 import os
 import re
-import shutil
-import subprocess
 import sys
 import tempfile
+
+from util import dir_changer, execute_wrapper
 
 """
 `doctest.py` is dedicated to extract code blocks (programs) from Go package
@@ -135,24 +134,8 @@ program_types = {
 filename_re = re.compile(f"\\w+\\.({'|'.join(program_types)})")
 
 
-@contextmanager
-def dir_changer(dirname, delete_dir):
-    """
-    Context manager to do not forget change cwd back. Delete `dirname` after
-    if `delete_dir=True`
-    """
-    old_cwd = os.getcwd()
-    os.chdir(dirname)
-    yield
-    os.chdir(old_cwd)
-    if delete_dir:
-        logger.info(f'Remove {dirname}')
-        shutil.rmtree(dirname)
-
-
 def gopath():
-    enc = sys.getfilesystemencoding()
-    return subprocess.check_output('go env GOPATH'.split()).strip().decode(enc)
+    return execute_wrapper('go env GOPATH'.split()).strip()
 
 
 def find_doc_file(package):
@@ -270,14 +253,6 @@ def execute_programs(programs, dirname):
         for program in programs:
             executor = program_types[program.language]
             executor(program)
-
-
-def execute_wrapper(args):
-    """Execute external program and check exit code. Return stdout"""
-    ret = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
-    if ret.returncode != 0:
-        raise RuntimeError(f"'{' '.join(ret.args)}' failed: {ret.stderr}")
-    return ret.stdout
 
 
 def execute_check_output(args, expected_output=None):
