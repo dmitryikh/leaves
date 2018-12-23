@@ -15,6 +15,15 @@ type DenseMat struct {
 	Rows   int
 }
 
+// DenseMatZero return DenseMat with shape `rows` by `cols` with all zero elements
+func DenseMatZero(rows int, cols int) DenseMat {
+	return DenseMat{
+		Values: make([]float64, rows*cols),
+		Cols:   cols,
+		Rows:   rows,
+	}
+}
+
 // DenseMatFromArray converts arrays of `values` to DenseMat using shape
 // information `rows` and `cols`
 func DenseMatFromArray(values []float64, rows int, cols int) (DenseMat, error) {
