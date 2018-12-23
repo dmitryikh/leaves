@@ -3,8 +3,8 @@ from contextlib import contextmanager
 import logging
 import os
 import re
-import subprocess
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -100,8 +100,8 @@ class Program:
 
 def parse_args():
     parser = argparse.ArgumentParser(description='run programs from go package documentation')
-    parser.add_argument('-p', '--package', type = str, required=True, help ='go package for testing')
-    parser.add_argument('-d', '--dir', type = str, default='', help ='directory where to run programs')
+    parser.add_argument('-p', '--package', type=str, required=True, help='go package for testing')
+    parser.add_argument('-d', '--dir', type=str, default='', help='directory where to run programs')
     params = parser.parse_args()
     return params
 
