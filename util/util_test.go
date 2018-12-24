@@ -174,3 +174,13 @@ func TestConstructBitset(t *testing.T) {
 	bitset = ConstructBitset([]int{})
 	check([]uint32{})
 }
+
+func TestSigmoidFloat64SliceInplace(t *testing.T) {
+	vec := [...]float64 {-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0}
+	vecTrue := [...]float64 {0.26894142, 0.37754067, 0.4378235, 0.5, 0.5621765, 0.62245933, 0.73105858}
+	SigmoidFloat64SliceInplace(vec[:])
+	err := AlmostEqualFloat64Slices(vec[:], vecTrue[:], 1e-8)
+	if err != nil {
+		t.Error(err.Error())
+	}
+}
