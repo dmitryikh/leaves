@@ -184,3 +184,39 @@ func TestSigmoidFloat64SliceInplace(t *testing.T) {
 		t.Error(err.Error())
 	}
 }
+
+func TestSoftmaxFloat64Slice(t *testing.T) {
+	compare := func(vec []float64, vecTrue []float64) {
+		res := make([]float64, len(vec))
+		SoftmaxFloat64Slice(vec, res, 0)
+		err := AlmostEqualFloat64Slices(res, vecTrue, 1e-8)
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	compare(
+		[]float64{0.25, 0.75},
+		[]float64{0.37754067, 0.62245933},
+	)
+
+	compare(
+		[]float64{0.0, 0.0},
+		[]float64{0.5, 0.5},
+	)
+
+	compare(
+		[]float64{1.0, 2.0, 3.0},
+		[]float64{0.09003057, 0.24472847, 0.66524096},
+	)
+
+	compare(
+		[]float64{10.0, 20.0, 30.0},
+		[]float64{2.06106005e-09, 4.53978686e-05, 9.99954600e-01},
+	)
+
+	compare(
+		[]float64{},
+		[]float64{},
+	)
+}

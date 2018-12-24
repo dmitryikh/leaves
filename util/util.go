@@ -250,6 +250,21 @@ func SigmoidFloat64SliceInplace(vec []float64) {
 	}
 }
 
+func SoftmaxFloat64Slice(rawValues []float64, outputValues []float64, startIndex int) {
+	sum := 0.0
+	for i, v := range rawValues {
+		exp := math.Exp(v)
+		outputValues[startIndex+i] = exp
+		sum += exp
+	}
+	if sum != 0.0 {
+		inv_sum := 1.0 / sum
+		for i := startIndex; i < startIndex + len(rawValues); i++ {
+			outputValues[i] *= inv_sum
+		}
+	}
+}
+
 // Float64FromBytes converts 8 bytes to float
 func Float64FromBytes(bytes []byte, littleEndian bool) float64 {
 	var bits uint64
