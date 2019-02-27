@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dmitryikh/leaves/transformation"
 	"github.com/dmitryikh/leaves/util"
 )
 
@@ -46,6 +47,36 @@ type lgNodeJSON struct {
 	RightChildRaw json.RawMessage `json:"right_child"`
 	LeftChild     interface{}
 	RightChild    interface{}
+}
+
+// lgObjective keeps parsed data from 'objective' field of lightgbm txt format
+// 'multiclass num_class:13' parsed to
+// lgObjective{name: 'multiclass', param: 'num_class', value:13}
+type lgObjective struct {
+	name  string
+	param string
+	value int
+}
+
+func lgObjectiveParse(objective string) (lgObjective, error) {
+	tokens := strings.Split(objective, " ")
+	objectiveStruct := lgObjective{}
+	errorMsg := fmt.Errorf("unexpected objective field: '%s'", objective)
+	if len(tokens) != 2 {
+		return objectiveStruct, errorMsg
+	}
+	objectiveStruct.name = tokens[0]
+	paramTokens := strings.Split(tokens[1], ":")
+	if len(paramTokens) != 2 {
+		return objectiveStruct, errorMsg
+	}
+	objectiveStruct.param = paramTokens[0]
+	value, err := strconv.Atoi(paramTokens[1])
+	if err != nil {
+		return objectiveStruct, errorMsg
+	}
+	objectiveStruct.value = value
+	return objectiveStruct, nil
 }
 
 func convertMissingType(decisionType uint32) (uint8, error) {
@@ -262,10 +293,6 @@ func lgTreeFromReader(reader *bufio.Reader) (lgTree, error) {
 func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensemble, error) {
 	e := &lgEnsemble{name: "lightgbm.gbdt"}
 
-	if loadTransformation {
-		return nil, fmt.Errorf("transformation functions are not supported for LightGBM models")
-	}
-
 	params, err := util.ReadParamsUntilBlank(reader)
 	if err != nil {
 		return nil, err
@@ -316,6 +343,35 @@ func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 		return nil, fmt.Errorf("wrong number of trees (%d) for number of class (%d)", nTrees, e.nRawOutputGroups)
 	}
 
+	var transform transformation.Transform
+	transform = &transformation.TransformRaw{e.nRawOutputGroups}
+	// NOTE: it seems that we don't nee to apply transformation to random forest models
+	// TODO: check it
+	if loadTransformation && !e.averageOutput {
+		objectiveStr, err := params.ToString("objective")
+		if err != nil {
+			return nil, err
+		}
+		objectiveStruct, err := lgObjectiveParse(objectiveStr)
+		if err != nil {
+			return nil, err
+		}
+		if objectiveStruct.name == "binary" && objectiveStruct.param == "sigmoid" {
+			if objectiveStruct.value != 1 {
+				return nil, fmt.Errorf("got sigmoid with value != 1 (got %d)", objectiveStruct.value)
+			}
+			transform = &transformation.TransformLogistic{}
+		} else if objectiveStruct.name == "multiclass" && objectiveStruct.param == "num_class" {
+			if objectiveStruct.value != e.nRawOutputGroups {
+				return nil, fmt.Errorf("got multiclass num_class != %d (got %d)", e.nRawOutputGroups, objectiveStruct.value)
+			}
+			transform = &transformation.TransformSoftmax{objectiveStruct.value}
+			// multiclass num_class:13
+		} else {
+			return nil, fmt.Errorf("unknown transformation function '%s'", objectiveStr)
+		}
+	}
+
 	e.Trees = make([]lgTree, 0, nTrees)
 	for i := 0; i < nTrees; i++ {
 		tree, err := lgTreeFromReader(reader)
@@ -324,7 +380,7 @@ func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 		}
 		e.Trees = append(e.Trees, tree)
 	}
-	return &Ensemble{e}, nil
+	return &Ensemble{e, transform}, nil
 }
 
 // LGEnsembleFromFile reads LightGBM model from binary file
@@ -602,5 +658,5 @@ func LGEnsembleFromJSON(reader io.Reader, loadTransformation bool) (*Ensemble, e
 		}
 		e.Trees = append(e.Trees, tree)
 	}
-	return &Ensemble{e}, nil
+	return &Ensemble{e, &transformation.TransformRaw{e.nRawOutputGroups}}, nil
 }

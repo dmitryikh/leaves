@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/dmitryikh/leaves/internal/pickle"
+	"github.com/dmitryikh/leaves/transformation"
 )
 
 func lgTreeFromSklearnDecisionTreeRegressor(tree pickle.SklearnDecisionTreeRegressor, scale float64, base float64) (lgTree, error) {
@@ -113,7 +114,7 @@ func lgTreeFromSklearnDecisionTreeRegressor(tree pickle.SklearnDecisionTreeRegre
 }
 
 // SKEnsembleFromReader reads sklearn tree ensemble model from `reader`
-func SKEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
+func SKEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensemble, error) {
 	e := &lgEnsemble{name: "sklearn.ensemble.GradientBoostingClassifier"}
 	decoder := pickle.NewDecoder(reader)
 	res, err := decoder.Decode()
@@ -171,16 +172,16 @@ func SKEnsembleFromReader(reader *bufio.Reader) (*Ensemble, error) {
 			base[k] = 0.0
 		}
 	}
-	return &Ensemble{e}, nil
+	return &Ensemble{e, &transformation.TransformRaw{e.nRawOutputGroups}}, nil
 }
 
 // SKEnsembleFromFile reads sklearn tree ensemble model from pickle file
-func SKEnsembleFromFile(filename string) (*Ensemble, error) {
+func SKEnsembleFromFile(filename string, loadTransformation bool) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
 	bufReader := bufio.NewReader(reader)
-	return SKEnsembleFromReader(bufReader)
+	return SKEnsembleFromReader(bufReader, loadTransformation)
 }
