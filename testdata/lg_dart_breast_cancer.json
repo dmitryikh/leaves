@@ -3236,5 +3236,6 @@
     }
    }
   }
- ]
+ ],
+ "pandas_categorical": null
 }

@@ -13,7 +13,7 @@ params = {
     'objective': 'binary',
 }
 clf = lgb.train(params, d_train, n_estimators)
-y_pred = clf.predict(X_test, raw_score=True)
+y_pred = clf.predict(X_test)
 
 clf.save_model('lg_dart_breast_cancer.model')  # save the model in txt format
 np.savetxt('lg_dart_breast_cancer_true_predictions.txt', y_pred)

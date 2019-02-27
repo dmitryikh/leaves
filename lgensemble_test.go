@@ -242,8 +242,8 @@ func TestLGEnsembleJSON1tree1leaf(t *testing.T) {
 		t.Fatalf("expected 1 trees (got %d)", model.NEstimators())
 	}
 
-	if model.NRawOutputGroups() != 1 {
-		t.Fatalf("expected 1 class (got %d)", model.NRawOutputGroups())
+	if model.NOutputGroups() != 1 {
+		t.Fatalf("expected 1 class (got %d)", model.NOutputGroups())
 	}
 
 	if model.NFeatures() != 41 {
@@ -273,8 +273,8 @@ func TestLGEnsembleJSON1tree(t *testing.T) {
 		t.Fatalf("expected 1 trees (got %d)", model.NEstimators())
 	}
 
-	if model.NRawOutputGroups() != 1 {
-		t.Fatalf("expected 1 class (got %d)", model.NRawOutputGroups())
+	if model.NOutputGroups() != 1 {
+		t.Fatalf("expected 1 class (got %d)", model.NOutputGroups())
 	}
 
 	if model.NFeatures() != 2 {
