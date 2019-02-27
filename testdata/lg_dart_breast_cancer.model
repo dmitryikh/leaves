@@ -178,28 +178,28 @@ Column_13=18
 Column_22=14
 Column_0=12
 Column_10=12
-Column_28=10
 Column_7=10
+Column_28=10
 Column_1=8
 Column_4=8
 Column_5=6
 Column_20=6
 Column_6=5
-Column_29=4
-Column_26=4
-Column_9=4
 Column_3=4
+Column_9=4
+Column_26=4
+Column_29=4
 Column_12=3
 Column_23=3
 Column_24=3
+Column_8=2
 Column_17=2
 Column_19=2
-Column_8=2
-Column_16=1
-Column_15=1
-Column_11=1
-Column_25=1
 Column_2=1
+Column_11=1
+Column_15=1
+Column_16=1
+Column_25=1
 
 parameters:
 [boosting: dart]
@@ -243,6 +243,7 @@ parameters:
 [monotone_constraints: ]
 [feature_contri: ]
 [forcedsplits_filename: ]
+[refit_decay_rate: 0.9]
 [verbosity: 1]
 [max_bin: 255]
 [min_data_in_bin: 3]

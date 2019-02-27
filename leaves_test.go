@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dmitryikh/leaves/mat"
+	"github.com/dmitryikh/leaves/transformation"
 	"github.com/dmitryikh/leaves/util"
 )
 
@@ -99,12 +100,17 @@ func TestLGHiggs(t *testing.T) {
 }
 
 func TestXGHiggs(t *testing.T) {
+	trueRawPath := filepath.Join("testdata", "xghiggs_1000examples_true_raw_predictions.txt")
 	truePath := filepath.Join("testdata", "xghiggs_1000examples_true_predictions.txt")
 	modelPath := filepath.Join("testdata", "xghiggs.model")
-	skipTestIfFileNotExist(t, truePath, modelPath)
+	skipTestIfFileNotExist(t, truePath, trueRawPath, modelPath)
 
 	// loading model
 	model, err := XGEnsembleFromFile(modelPath, false)
+	if err != nil {
+		t.Fatalf("fail loading model %s: %s", modelPath, err.Error())
+	}
+	modelWithTransformation, err := XGEnsembleFromFile(modelPath, true)
 	if err != nil {
 		t.Fatalf("fail loading model %s: %s", modelPath, err.Error())
 	}
@@ -112,15 +118,27 @@ func TestXGHiggs(t *testing.T) {
 	const tolerance = 1e-5
 
 	// Dense matrix
-	InnerTestHiggs(t, model, 1, true, truePath, tolerance)
-	InnerTestHiggs(t, model, 2, true, truePath, tolerance)
-	InnerTestHiggs(t, model, 3, true, truePath, tolerance)
-	InnerTestHiggs(t, model, 4, true, truePath, tolerance)
+	InnerTestHiggs(t, model, 1, true, trueRawPath, tolerance)
+	InnerTestHiggs(t, model, 2, true, trueRawPath, tolerance)
+	InnerTestHiggs(t, model, 3, true, trueRawPath, tolerance)
+	InnerTestHiggs(t, model, 4, true, trueRawPath, tolerance)
 	// Sparse matrix
-	InnerTestHiggs(t, model, 1, false, truePath, tolerance)
-	InnerTestHiggs(t, model, 2, false, truePath, tolerance)
-	InnerTestHiggs(t, model, 3, false, truePath, tolerance)
-	InnerTestHiggs(t, model, 4, false, truePath, tolerance)
+	InnerTestHiggs(t, model, 1, false, trueRawPath, tolerance)
+	InnerTestHiggs(t, model, 2, false, trueRawPath, tolerance)
+	InnerTestHiggs(t, model, 3, false, trueRawPath, tolerance)
+	InnerTestHiggs(t, model, 4, false, trueRawPath, tolerance)
+
+	// model with transformation function
+	// Dense matrix
+	InnerTestHiggs(t, modelWithTransformation, 1, true, truePath, tolerance)
+	InnerTestHiggs(t, modelWithTransformation, 2, true, truePath, tolerance)
+	InnerTestHiggs(t, modelWithTransformation, 3, true, truePath, tolerance)
+	InnerTestHiggs(t, modelWithTransformation, 4, true, truePath, tolerance)
+	// Sparse matrix
+	InnerTestHiggs(t, modelWithTransformation, 1, false, truePath, tolerance)
+	InnerTestHiggs(t, modelWithTransformation, 2, false, truePath, tolerance)
+	InnerTestHiggs(t, modelWithTransformation, 3, false, truePath, tolerance)
+	InnerTestHiggs(t, modelWithTransformation, 4, false, truePath, tolerance)
 }
 
 func InnerTestHiggs(t *testing.T, model *Ensemble, nThreads int, isDense bool, truePredictionsFilename string, tolerance float64) {
@@ -274,42 +292,50 @@ func TestXGAgaricus(t *testing.T) {
 
 func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 	// loading test data
-	path := filepath.Join("testdata", "agaricus_test.libsvm")
-	reader, err := os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader := bufio.NewReader(reader)
-	csr, err := mat.CSRMatFromLibsvm(bufReader, 0, true)
+	testPath := filepath.Join("testdata", "agaricus_test.libsvm")
+	modelPath := filepath.Join("testdata", "xgagaricus.model")
+	truePath := filepath.Join("testdata", "xgagaricus_true_predictions.txt")
+	skipTestIfFileNotExist(t, testPath, modelPath, truePath)
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// loading model
-	path = filepath.Join("testdata", "xgagaricus.model")
-	model, err := XGEnsembleFromFile(path, false)
+	model, err := XGEnsembleFromFile(modelPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if model.NEstimators() != 3 {
 		t.Fatalf("expected 3 trees (got %d)", model.NEstimators())
 	}
+	if model.NOutputGroups() != 1 {
+		t.Fatalf("expected NOutputGroups = 1 (got %d)", model.NOutputGroups())
+	}
+	if model.NRawOutputGroups() != 1 {
+		t.Fatalf("expected NRawOutputGroups = 1 (got %d)", model.NRawOutputGroups())
+	}
+	if model.Transformation().Type() != transformation.Logistic {
+		t.Fatalf("expected TransforType = Logistic (got %s)", model.Transformation().Name())
+	}
 
 	// loading true predictions as DenseMat
-	path = filepath.Join("testdata", "xgagaricus_true_predictions.txt")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	truePredictions, err := mat.DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, ",", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// do predictions
-	predictions := make([]float64, csr.Rows())
+	// do predictions with transformation inside
+	predictions := make([]float64, csr.Rows()*model.NOutputGroups())
 	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
+	// compare results
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-7); err != nil {
+		t.Fatalf("different predictions: %s", err.Error())
+	}
+
+	// do raw predictions with transformation outside
+	rawModel := model.EnsembleWithRawPredictions()
+	rawModel.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 	util.SigmoidFloat64SliceInplace(predictions)
 	// compare results
 	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-7); err != nil {
@@ -318,40 +344,38 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 }
 
 func TestXGBLinAgaricus(t *testing.T) {
-	InnerTestXGBLinAgaricus(t, 1)
-	InnerTestXGBLinAgaricus(t, 2)
-	InnerTestXGBLinAgaricus(t, 3)
-	InnerTestXGBLinAgaricus(t, 4)
+	InnerTestXGBLinAgaricus(t, true, 1)
+	InnerTestXGBLinAgaricus(t, true, 2)
+	InnerTestXGBLinAgaricus(t, true, 3)
+	InnerTestXGBLinAgaricus(t, true, 4)
+	InnerTestXGBLinAgaricus(t, false, 1)
+	InnerTestXGBLinAgaricus(t, false, 2)
+	InnerTestXGBLinAgaricus(t, false, 3)
+	InnerTestXGBLinAgaricus(t, false, 4)
 }
 
-func InnerTestXGBLinAgaricus(t *testing.T, nThreads int) {
-	// loading test data
-	path := filepath.Join("testdata", "agaricus_test.libsvm")
-	reader, err := os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
+func InnerTestXGBLinAgaricus(t *testing.T, loadTransformation bool, nThreads int) {
+	testPath := filepath.Join("testdata", "agaricus_test.libsvm")
+	modelPath := filepath.Join("testdata", "xgblin_agaricus.model")
+	truePath := filepath.Join("testdata", "xgblin_agaricus_true_raw_predictions.txt")
+	if loadTransformation {
+		truePath = filepath.Join("testdata", "xgblin_agaricus_true_predictions.txt")
 	}
-	bufReader := bufio.NewReader(reader)
-	csr, err := mat.CSRMatFromLibsvm(bufReader, 0, true)
+
+	// loading test data
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// loading model
-	path = filepath.Join("testdata", "xgblin_agaricus.model")
-	model, err := XGBLinearFromFile(path, false)
+	// loading model with or withoud transformation function (depends on loadTransformation)
+	model, err := XGBLinearFromFile(modelPath, loadTransformation)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// loading true predictions as DenseMat
-	path = filepath.Join("testdata", "xgblin_agaricus_true_predictions.txt")
-	reader, err = os.Open(path)
-	if err != nil {
-		t.Skipf("Skipping due to absence of %s", path)
-	}
-	bufReader = bufio.NewReader(reader)
-	truePredictions, err := mat.DenseMatFromCsv(bufReader, 0, false, ",", 0.0)
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, ",", 0.0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -360,7 +384,38 @@ func InnerTestXGBLinAgaricus(t *testing.T, nThreads int) {
 	predictions := make([]float64, csr.Rows())
 	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 	// compare results
-	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-6); err != nil {
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-5); err != nil {
+		t.Fatalf("different predictions: %s", err.Error())
+	}
+}
+
+func InnerTestXGBLinRawAgaricus(t *testing.T, nThreads int) {
+	testPath := filepath.Join("testdata", "agaricus_test.libsvm")
+	modelPath := filepath.Join("testdata", "xgblin_agaricus.model")
+	truePath := filepath.Join("testdata", "xgblin_agaricus_true_raw_predictions.txt")
+	// loading test data
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model with transformation function (binary classification in the case)
+	model, err := XGBLinearFromFile(modelPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, ",", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, csr.Rows())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
+	// compare results
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-5); err != nil {
 		t.Fatalf("different predictions: %s", err.Error())
 	}
 }
@@ -434,17 +489,24 @@ func InnerBenchmarkHiggs(b *testing.B, model *Ensemble, nThreads int, isDense bo
 }
 
 func TestLGMulticlass(t *testing.T) {
-	InnerTestLGMulticlass(t, 1)
-	InnerTestLGMulticlass(t, 2)
-	InnerTestLGMulticlass(t, 3)
-	InnerTestLGMulticlass(t, 4)
+	InnerTestLGMulticlass(t, false, 1)
+	InnerTestLGMulticlass(t, false, 2)
+	InnerTestLGMulticlass(t, false, 3)
+	InnerTestLGMulticlass(t, false, 4)
+	InnerTestLGMulticlass(t, true, 1)
+	InnerTestLGMulticlass(t, true, 2)
+	InnerTestLGMulticlass(t, true, 3)
+	InnerTestLGMulticlass(t, true, 4)
 }
 
-func InnerTestLGMulticlass(t *testing.T, nThreads int) {
+func InnerTestLGMulticlass(t *testing.T, loadTransformation bool, nThreads int) {
 	// loading test data
 	testPath := filepath.Join("testdata", "multiclass_test.tsv")
 	modelPath := filepath.Join("testdata", "lgmulticlass.model")
-	truePath := filepath.Join("testdata", "lgmulticlass_true_predictions.txt")
+	truePath := filepath.Join("testdata", "lgmulticlass_true_raw_predictions.txt")
+	if loadTransformation {
+		truePath = filepath.Join("testdata", "lgmulticlass_true_predictions.txt")
+	}
 	skipTestIfFileNotExist(t, testPath, modelPath, truePath)
 	dense, err := mat.DenseMatFromCsvFile(testPath, 0, true, "\t", 0.0)
 	if err != nil {
@@ -452,15 +514,15 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath, false)
+	model, err := LGEnsembleFromFile(modelPath, loadTransformation)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if model.NEstimators() != 10 {
 		t.Fatalf("expected 10 trees (got %d)", model.NEstimators())
 	}
-	if model.NRawOutputGroups() != 5 {
-		t.Fatalf("expected 5 classes (got %d)", model.NRawOutputGroups())
+	if model.NOutputGroups() != 5 {
+		t.Fatalf("expected 5 classes (got %d)", model.NOutputGroups())
 	}
 
 	// loading true predictions as DenseMat
@@ -470,7 +532,7 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	}
 
 	// do predictions
-	predictions := make([]float64, dense.Rows*model.NRawOutputGroups())
+	predictions := make([]float64, dense.Rows*model.NOutputGroups())
 	model.PredictDense(dense.Values, dense.Rows, dense.Cols, predictions, 0, nThreads)
 	// compare results
 	const tolerance = 1e-7
@@ -481,12 +543,12 @@ func InnerTestLGMulticlass(t *testing.T, nThreads int) {
 	// check Predict
 	singleIdx := 200
 	fvals := dense.Values[singleIdx*dense.Cols : (singleIdx+1)*dense.Cols]
-	predictions = make([]float64, model.NRawOutputGroups())
+	predictions = make([]float64, model.NOutputGroups())
 	err = model.Predict(fvals, 0, predictions)
 	if err != nil {
 		t.Errorf("error while call model.Predict: %s", err.Error())
 	}
-	if err := util.AlmostEqualFloat64Slices(truePredictions.Values[singleIdx*model.NRawOutputGroups():(singleIdx+1)*model.NRawOutputGroups()], predictions, tolerance); err != nil {
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values[singleIdx*model.NOutputGroups():(singleIdx+1)*model.NOutputGroups()], predictions, tolerance); err != nil {
 		t.Errorf("different Predict prediction: %s", err.Error())
 	}
 }
@@ -531,7 +593,7 @@ func InnerTestXGDermatology(t *testing.T, nThreads int) {
 	}
 
 	// do predictions
-	predictions := make([]float64, csr.Rows()*model.NRawOutputGroups())
+	predictions := make([]float64, csr.Rows()*model.NOutputGroups())
 	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
 	// compare results
 	const tolerance = 1e-6
@@ -551,7 +613,7 @@ func TestSKGradientBoostingClassifier(t *testing.T) {
 	}
 
 	// loading model
-	model, err := SKEnsembleFromFile(modelPath)
+	model, err := SKEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -563,7 +625,7 @@ func TestSKGradientBoostingClassifier(t *testing.T) {
 	}
 
 	// do predictions
-	predictions := make([]float64, csr.Rows()*model.NRawOutputGroups())
+	predictions := make([]float64, csr.Rows()*model.NOutputGroups())
 	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, 1)
 	// compare results
 	const tolerance = 1e-6
@@ -585,7 +647,7 @@ func TestSKIris(t *testing.T) {
 	}
 
 	// loading model
-	model, err := SKEnsembleFromFile(modelPath)
+	model, err := SKEnsembleFromFile(modelPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -597,7 +659,7 @@ func TestSKIris(t *testing.T) {
 	}
 
 	// do predictions
-	predictions := make([]float64, csr.Rows()*model.NRawOutputGroups())
+	predictions := make([]float64, csr.Rows()*model.NOutputGroups())
 	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, 1)
 	// compare results
 	const tolerance = 1e-6
@@ -627,9 +689,15 @@ func TestLGRandomForestIris(t *testing.T) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath, false)
+	model, err := LGEnsembleFromFile(modelPath, true)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if model.Transformation().Name() != "raw" {
+		t.Errorf("TransformName should be \"raw\" (got: %s)", model.Transformation().Name())
+	}
+	if model.Transformation().Type() != transformation.Raw {
+		t.Errorf("TransformType should be Raw (got: %d)", model.Transformation().Type())
 	}
 
 	// loading true predictions as DenseMat
@@ -637,9 +705,8 @@ func TestLGRandomForestIris(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// do predictions
-	predictions := make([]float64, csr.Rows()*model.NRawOutputGroups())
+	predictions := make([]float64, csr.Rows()*model.NOutputGroups())
 	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, 1)
 	// compare results
 	const tolerance = 1e-6
@@ -702,7 +769,7 @@ func TestLGDARTBreastCancer(t *testing.T) {
 	}
 
 	// loading model
-	model, err := LGEnsembleFromFile(modelPath, false)
+	model, err := LGEnsembleFromFile(modelPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -714,7 +781,7 @@ func TestLGDARTBreastCancer(t *testing.T) {
 	}
 
 	// do predictions
-	predictions := make([]float64, test.Rows*model.NRawOutputGroups())
+	predictions := make([]float64, test.Rows*model.NOutputGroups())
 	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -753,7 +820,7 @@ func TestLGKDDCup99(t *testing.T) {
 	}
 
 	// do predictions
-	predictions := make([]float64, test.Rows*model.NRawOutputGroups())
+	predictions := make([]float64, test.Rows*model.NOutputGroups())
 	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -790,7 +857,7 @@ func InnerBenchmarkLGKDDCup99(b *testing.B, nThreads int) {
 
 	// do benchmark
 	b.ResetTimer()
-	predictions := make([]float64, test.Rows*model.NRawOutputGroups())
+	predictions := make([]float64, test.Rows*model.NOutputGroups())
 	for i := 0; i < b.N; i++ {
 		model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, nThreads)
 	}
@@ -826,11 +893,12 @@ func TestLGJsonBreastCancer(t *testing.T) {
 	}
 
 	// do predictions
-	predictions := make([]float64, test.Rows*model.NRawOutputGroups())
+	predictions := make([]float64, test.Rows*model.NOutputGroups())
 	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
+	util.SigmoidFloat64SliceInplace(predictions)
 
 	// compare results
 	const tolerance = 1e-6

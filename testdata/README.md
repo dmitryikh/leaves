@@ -8,9 +8,11 @@
   ```sh
     head -n 1000 ../data/higgs.test > ../data/higgs_1000examples_test.libsvm
     xgboost xgboost.conf max_bin=255 tree_method=hist grow_policy=lossguide max_depth=0 max_leaves=255 data="../data/higgs.train" eval[test]="../data/higgs.test" objective="binary:logistic" eval_metric=auc model_out=xghiggs.model 2>&1 | tee xgboost_hist_higgs_accuracy.log
-    xgboost xgboost.conf task=pred model_in=higgs.model pred_margin=true test_path="../data/higgs_1000examples_test.libsvm" name_pred="xghiggs_1000examples_true_predictions.txt"
+    xgboost xgboost.conf task=pred model_in=xghiggs.model pred_margin=true test_path="../data/higgs_1000examples_test.libsvm" name_pred="xghiggs_1000examples_true_raw_predictions.txt"
+    xgboost xgboost.conf task=pred model_in=xghiggs.model test_path="../data/higgs_1000examples_test.libsvm" name_pred="xghiggs_1000examples_true_predictions.txt"
     cp ../data/higgs_1000examples_test.libsvm $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp xghiggs_1000examples_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp xghiggs_1000examples_true_raw_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
     cp xghiggs.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   ```
 
@@ -71,6 +73,37 @@
     cp ../data/agaricus.txt.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/agaricus_test.libsvm
   ```
 
+## Agaricus dataset for XGBoost gblinear model
+
+  1. clone https://github.com/dmlc/xgboost
+  2. cd to xgboost/demo/guide-python/
+  3. run script there:
+  ```python
+    import numpy as np
+    import xgboost as xgb
+
+    ### load data in do training
+    dtrain = xgb.DMatrix('../data/agaricus.txt.train')
+    dtest = xgb.DMatrix('../data/agaricus.txt.test')
+    param = {'booster': 'gblinear', 'max_depth':2, 'eta':1, 'silent':1, 'objective':'binary:logistic'}
+    watchlist = [(dtest, 'eval'), (dtrain, 'train')]
+    num_round = 3
+    bst = xgb.train(param, dtrain, num_round, watchlist)
+
+    ypred = bst.predict(dtest)
+    ypred_raw = bst.predict(dtest, output_margin=True)
+    np.savetxt('xgblin_agaricus_true_predictions.txt', ypred, delimiter='\t')
+    np.savetxt('xgblin_agaricus_true_raw_predictions.txt', ypred_raw, delimiter='\t')
+    bst.save_model('xgblin_agaricus.model')
+  ```
+  4.
+  ```sh
+    cp xgblin_agaricus_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp xgblin_agaricus_true_raw_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp xgblin_agaricus.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+    cp ../data/agaricus.txt.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/agaricus_test.libsvm
+  ```
+
 ## Agaricus dataset for XGBoost DART model
 
   1. clone https://github.com/dmlc/xgboost
@@ -112,10 +145,12 @@
   3. run
   ```sh
   lightgbm boosting_type=gbdt objective=multiclass num_class=5 max_bin=255 data=multiclass.train num_trees=10 learning_rate=0.05 num_leaves=31 output_model=lgmulticlass.model
-  lightgbm input_model=lgmulticlass.model data=multiclass.test task=predict output_result=lgmulticlass_true_predictions.txt predict_raw_score=true
+  lightgbm input_model=lgmulticlass.model data=multiclass.test task=predict output_result=lgmulticlass_true_predictions.txt
+  lightgbm input_model=lgmulticlass.model data=multiclass.test task=predict output_result=lgmulticlass_true_raw_predictions.txt predict_raw_score=true
   cp multiclass.test $GOPATH/src/github.com/dmitryikh/leaves/testdata/multiclass_test.tsv
   cp lgmulticlass.model $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   cp lgmulticlass_true_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
+  cp lgmulticlass_true_raw_predictions.txt $GOPATH/src/github.com/dmitryikh/leaves/testdata/.
   ```
 
 
