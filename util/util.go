@@ -75,6 +75,14 @@ func (p *stringParams) ToInt(key string) (int, error) {
 	return value, nil
 }
 
+func (p *stringParams) ToString(key string) (string, error) {
+	valueStr, isFound := (*p)[key]
+	if !isFound {
+		return "", fmt.Errorf("no %s field", key)
+	}
+	return valueStr, nil
+}
+
 func (p *stringParams) Compare(key string, rhs string) error {
 	valueStr, isFound := (*p)[key]
 	if !isFound {
