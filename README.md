@@ -14,6 +14,7 @@ _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting R
 ## Features
   * General Features:
     * support parallel predictions for batches
+    * support sigmoid, softmax transformation functions
   * Support LightGBM ([repo](https://github.com/Microsoft/LightGBM)) models:
     * read models from `text` format and from `JSON` format
     * support `gbdt`, `rf` (random forest) and `dart` models
@@ -51,7 +52,8 @@ import (
 
 func main() {
 	// 1. Read model
-	model, err := leaves.LGEnsembleFromFile("lightgbm_model.txt")
+	useTransformation := true
+	model, err := leaves.LGEnsembleFromFile("lightgbm_model.txt", useTransformation)
 	if err != nil {
 		panic(err)
 	}
@@ -68,6 +70,8 @@ In order to use XGBoost model, just change `leaves.LGEnsembleFromFile`, to `leav
 ## Documentation
 
 Documentation is hosted on godoc ([link](https://godoc.org/github.com/dmitryikh/leaves)). Documentation contains complex usage examples and full API reference. Some additional information about usage examples can be found in [leaves_test.go](leaves_test.go).
+
+Some additional information on new features and backward compatibility can be found in [NOTES.md](NOTES.md).
 
 ## Benchmark
 
@@ -104,9 +108,9 @@ Single thread:
 ## Limitations
 
   * LightGBM models:
-    * no support transformations functions (sigmoid, lambdarank, etc). Output scores is _raw scores_
+    * limited support of transformation functions (support only sigmoid, softmax)
   * XGBoost models:
-    * no support transformations functions. Output scores is _raw scores_
+    * limited support of transformation functions (support only sigmoid, softmax)
     * could be slight divergence between C API predictions vs. _leaves_ because of floating point convertions and comparisons tolerances
   * scikit-learn tree models:
     * no support transformations functions. Output scores is _raw scores_ (as from `GradientBoostingClassifier.decision_function`)
