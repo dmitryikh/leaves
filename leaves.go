@@ -42,8 +42,7 @@ func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, pr
 // PredictSingle calculates prediction for single class model. If ensemble is
 // multiclass, will return quitely 0.0. Only `nEstimators` first estimators
 // (trees in most cases) will be used. If `len(fvals)` is not enough function
-// will quietly return 0.0. Note, that result is a raw score (before sigmoid
-// function transformation and etc)
+// will quietly return 0.0.
 // NOTE: for multiclass prediction use Predict
 func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
 	if e.NOutputGroups() != 1 {
@@ -60,8 +59,7 @@ func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
 }
 
 // Predict calculates single prediction for one or multiclass ensembles. Only
-// `nEstimators` first estimators (trees in most cases) will be used. Note, that
-// result is a raw score (before sigmoid function transformation and etc)
+// `nEstimators` first estimators (trees in most cases) will be used.
 // NOTE: for single class predictions one can use simplified function PredictSingle
 func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float64) error {
 	nRows := 1
@@ -79,10 +77,9 @@ func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float
 
 // PredictCSR calculates predictions from ensemble. `indptr`, `cols`, `vals`
 // represent data structures from Compressed Sparse Row Matrix format (see
-// CSRMat). Only `nEstimators` first estimators will be used (trees in most
-// cases). `nThreads` points to number of threads that will be utilized (maximum
+// CSRMat). Only `nEstimators` first estimators (trees) will be used.
+// `nThreads` points to number of threads that will be utilized (maximum
 // is GO_MAX_PROCS)
-// Note, that result is a raw score (before sigmoid function transformation and etc).
 // Note, `predictions` slice should be properly allocated on call side
 func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nEstimators int, nThreads int) error {
 	nRows := len(indptr) - 1
@@ -159,7 +156,6 @@ func (e *Ensemble) predictCSRInner(
 // represent data structures from Rom Major Matrix format (see DenseMat). Only
 // `nEstimators` first estimators (trees in most cases) will be used. `nThreads`
 // points to number of threads that will be utilized (maximum is GO_MAX_PROCS)
-// Note, that result is a raw score (before sigmoid function transformation and etc).
 // Note, `predictions` slice should be properly allocated on call side
 func (e *Ensemble) PredictDense(
 	vals []float64,
@@ -234,7 +230,7 @@ func (e *Ensemble) NRawOutputGroups() int {
 // NOutputGroups returns number of groups (numbers) in every object predictions.
 // For example binary logistic model will give 1, but 4-class prediction model
 // will give 4 numbers per object. This value usually used to preallocate slice
-// with prediction values
+// for prediction values
 func (e *Ensemble) NOutputGroups() int {
 	return e.transform.NOutputGroups()
 }
