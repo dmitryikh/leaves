@@ -1,5 +1,6 @@
 # leaves
 
+[![version](https://img.shields.io/badge/version-0.8.0-yellow.svg)](https://semver.org)
 [![Build Status](https://travis-ci.org/dmitryikh/leaves.svg?branch=master)](https://travis-ci.org/dmitryikh/leaves)
 [![GoDoc](https://godoc.org/github.com/dmitryikh/leaves?status.png)](https://godoc.org/github.com/dmitryikh/leaves)
 [![Coverage Status](https://coveralls.io/repos/github/dmitryikh/leaves/badge.svg?branch=master)](https://coveralls.io/github/dmitryikh/leaves?branch=master)
@@ -10,6 +11,8 @@
 ## Introduction
 
 _leaves_ is a library implementing prediction code for GBRT (Gradient Boosting Regression Trees) models in **pure Go**. The goal of the project - make it possible to use models from popular GBRT frameworks in Go programs without C API bindings.
+
+**NOTE**: Before `1.0.0` release the API is a subject to change.
 
 ## Features
   * General Features:
