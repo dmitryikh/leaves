@@ -1,5 +1,7 @@
 package leaves
 
+import "fmt"
+
 // xgLinear is XGBoost model (gblinear)
 type xgLinear struct {
 	NumFeature       int
@@ -36,6 +38,10 @@ func (e *xgLinear) predictInner(fvals []float64, nIterations int, predictions []
 			predictions[startIndex+k] += fvals[i] * float64(e.Weights[e.nRawOutputGroups*i+k])
 		}
 	}
+}
+
+func (e *xgLinear) predictLeaves(fvals []float64, predictions []int) error {
+	return fmt.Errorf("leaf prediction not supported for xgboost linear models")
 }
 
 func (e *xgLinear) resetFVals(fvals []float64) {

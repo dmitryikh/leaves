@@ -71,9 +71,9 @@ func (t *lgTree) decision(node *lgNode, fval float64) bool {
 	return t.numericalDecision(node, fval)
 }
 
-func (t *lgTree) predict(fvals []float64) float64 {
+func (t *lgTree) predictLeaf(fvals []float64) int {
 	if len(t.nodes) == 0 {
-		return t.leafValues[0]
+		return 0
 	}
 	idx := uint32(0)
 	for {
@@ -81,16 +81,20 @@ func (t *lgTree) predict(fvals []float64) float64 {
 		left := t.decision(node, fvals[node.Feature])
 		if left {
 			if node.Flags&leftLeaf > 0 {
-				return t.leafValues[node.Left]
+				return int(node.Left)
 			}
 			idx = node.Left
 		} else {
 			if node.Flags&rightLeaf > 0 {
-				return t.leafValues[node.Right]
+				return int(node.Right)
 			}
 			idx++
 		}
 	}
+}
+
+func (t *lgTree) predict(fvals []float64) float64 {
+	return t.leafValues[t.predictLeaf(fvals)]
 }
 
 func (t *lgTree) findInBitset(idx uint32, pos uint32) bool {

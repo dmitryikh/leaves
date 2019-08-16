@@ -19,6 +19,7 @@ type ensembleBaseInterface interface {
 	Name() string
 	adjustNEstimators(nEstimators int) int
 	predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int)
+	predictLeaves(fvals []float64, predictions []int) error
 	resetFVals(fvals []float64)
 }
 
@@ -73,6 +74,15 @@ func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float
 
 	e.predictInnerAndTransform(fvals, nEstimators, predictions, 0)
 	return nil
+}
+
+func (e *Ensemble) PredictLeaves(fvals []float64, predictions []int) error {
+	if len(predictions) != e.NRawOutputGroups()*e.NEstimators() {
+		return fmt.Errorf("predictions slice wrong size (expected %d)", e.NRawOutputGroups()*e.NEstimators())
+	} else if len(fvals) != e.NFeatures() {
+		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
+	}
+	return e.predictLeaves(fvals, predictions)
 }
 
 // PredictCSR calculates predictions from ensemble. `indptr`, `cols`, `vals`

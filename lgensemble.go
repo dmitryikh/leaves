@@ -52,6 +52,13 @@ func (e *lgEnsemble) predictInner(fvals []float64, nEstimators int, predictions 
 	}
 }
 
+func (e *lgEnsemble) predictLeaves(fvals []float64, predictions []int) error {
+	for i, t := range e.Trees {
+		predictions[i] = t.predictLeaf(fvals)
+	}
+	return nil
+}
+
 func (e *lgEnsemble) adjustNEstimators(nEstimators int) int {
 	if nEstimators > 0 {
 		nEstimators = util.MinInt(nEstimators, e.NEstimators())
