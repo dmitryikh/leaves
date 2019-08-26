@@ -82,6 +82,7 @@ func (e *Ensemble) PredictLeaves(fvals []float64, predictions []int) error {
 		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
 	} else if t, ok := e.ensembleBaseInterface.(*lgEnsemble); ok {
 		t.predictLeaves(fvals, predictions)
+		return nil
 	}
 	return fmt.Errorf("only supported for lightgbm")
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/dmitryikh/leaves/mat"
@@ -904,5 +905,31 @@ func TestLGJsonBreastCancer(t *testing.T) {
 	const tolerance = 1e-6
 	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
 		t.Errorf("different predictions: %s", err.Error())
+	}
+}
+
+func TestPredictLeaves(t *testing.T) {
+	modelPath := filepath.Join("testdata", "lg_dart_breast_cancer.model")
+	xgmodelPath := filepath.Join("testdata", "xg_dart_agaricus.model")
+	var predictions [20]int
+	var fvals [127]float64
+	for i, _ := range fvals[:30] {
+		fvals[i] = float64(i)
+	}
+	expected := []int{2, 2, 3, 2, 1, 4, 2, 2, 4, 4}
+	if xgmodel, err := XGEnsembleFromFile(xgmodelPath, false); err != nil {
+		t.Fatal(err)
+	} else if model, err := LGEnsembleFromFile(modelPath, false); err != nil {
+		t.Fatal(err)
+	} else if err := model.PredictLeaves(nil, nil); err == nil {
+		t.Fail()
+	} else if err := model.PredictLeaves(fvals[:], nil); err == nil {
+		t.Fail()
+	} else if err := xgmodel.PredictLeaves(fvals[:], predictions[:]); err == nil {
+		t.Fail()
+	} else if err := model.PredictLeaves(fvals[:30], predictions[:10]); err != nil {
+		t.Error(err)
+	} else if !reflect.DeepEqual(predictions[:10], expected) {
+		t.Fail()
 	}
 }
