@@ -57,13 +57,6 @@ func (e *xgEnsemble) predictInner(fvals []float64, nEstimators int, predictions 
 	}
 }
 
-func (e *xgEnsemble) predictLeaves(fvals []float64, predictions []int) error {
-	for i, t := range e.Trees {
-		predictions[i] = t.predictLeaf(fvals)
-	}
-	return nil
-}
-
 func (e *xgEnsemble) resetFVals(fvals []float64) {
 	for j := 0; j < len(fvals); j++ {
 		fvals[j] = math.NaN()
