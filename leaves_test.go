@@ -923,7 +923,7 @@ func TestPredictLeaves(t *testing.T) {
 		t.Fatal(err)
 	} else if err := model.PredictLeaves(nil, nil); err == nil {
 		t.Fail()
-	} else if err := model.PredictLeaves(fvals[:], nil); err == nil {
+	} else if err := model.PredictLeaves(fvals[:30], nil); err == nil {
 		t.Fail()
 	} else if err := xgmodel.PredictLeaves(fvals[:], predictions[:]); err == nil {
 		t.Fail()
