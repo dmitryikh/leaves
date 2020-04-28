@@ -18,7 +18,8 @@ const (
 	// positive class probabilities
 	Logistic TransformType = 1
 	// Softmax is a TransformType to obtain multiclass probabilities
-	Softmax TransformType = 2
+	Softmax  TransformType = 2
+	Softprob TransformType = 3
 )
 
 func (t TransformType) Name() string {
@@ -26,8 +27,9 @@ func (t TransformType) Name() string {
 		"raw",
 		"logistic",
 		"softmax",
+		"softprob",
 	}
-	if t < Raw || t > Softmax {
+	if t < Raw || t > Softprob {
 		return "unknown"
 	}
 
