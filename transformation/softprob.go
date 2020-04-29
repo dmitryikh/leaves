@@ -3,6 +3,7 @@ package transformation
 import (
 	"fmt"
 	"math"
+	"os"
 )
 
 type TransformSoftprob struct {
@@ -14,8 +15,18 @@ func (t *TransformSoftprob) Transform(rawPredictions []float64, outputPrediction
 		return fmt.Errorf("expected len(rawPredictions) = %d (got %d)", t.NClasses, len(rawPredictions))
 	}
 
-	for i, r := range rawPredictions {
-		outputPredictions[i] = (1 / (1 + math.Exp(-r)))
+	fmt.Fprintf(os.Stderr, "%v", rawPredictions)
+
+	sum := 0.0
+
+	for i, v := range rawPredictions {
+		exp := math.Exp(v)
+		outputPredictions[i] = exp
+		sum += exp
+	}
+
+	for i := range outputPredictions {
+		outputPredictions[i] /= sum
 	}
 
 	return nil
