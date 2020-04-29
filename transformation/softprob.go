@@ -3,7 +3,6 @@ package transformation
 import (
 	"fmt"
 	"math"
-	"os"
 )
 
 type TransformSoftprob struct {
@@ -14,8 +13,6 @@ func (t *TransformSoftprob) Transform(rawPredictions []float64, outputPrediction
 	if len(rawPredictions) != len(outputPredictions) {
 		return fmt.Errorf("expected len(rawPredictions) = %d (got %d)", t.NClasses, len(rawPredictions))
 	}
-
-	fmt.Fprintf(os.Stderr, "%v", rawPredictions)
 
 	sum := 0.0
 
