@@ -46,12 +46,16 @@ func (e *xgEnsemble) adjustNEstimators(nEstimators int) int {
 	return nEstimators
 }
 
-func (e *xgEnsemble) predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
+func (e *xgEnsemble) predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int, predictionLeafIndices [][]uint32) {
 	for k := 0; k < e.nRawOutputGroups; k++ {
 		predictions[startIndex+k] = e.BaseScore
 		for i := 0; i < nEstimators; i++ {
 			if e.TreeInfo[i] == k {
-				predictions[startIndex+k] += e.Trees[i].predict(fvals) * e.WeightDrop[i]
+				pred, idx := e.Trees[i].predict(fvals)
+				predictions[startIndex+k] += pred * e.WeightDrop[i]
+				if predictionLeafIndices != nil {
+					predictionLeafIndices[startIndex+k][i] = idx
+				}
 			}
 		}
 	}

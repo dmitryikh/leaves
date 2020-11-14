@@ -29,7 +29,7 @@ func (e *xgLinear) Name() string {
 	return "xgboost.gblinear"
 }
 
-func (e *xgLinear) predictInner(fvals []float64, nIterations int, predictions []float64, startIndex int) {
+func (e *xgLinear) predictInner(fvals []float64, nIterations int, predictions []float64, startIndex int, predictionLeafIndices [][]uint32) {
 	for k := 0; k < e.nRawOutputGroups; k++ {
 		predictions[startIndex+k] = e.BaseScore + float64(e.Weights[e.nRawOutputGroups*e.NumFeature+k])
 		for i := 0; i < e.NumFeature; i++ {

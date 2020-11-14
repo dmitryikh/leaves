@@ -18,7 +18,7 @@ type ensembleBaseInterface interface {
 	NFeatures() int
 	Name() string
 	adjustNEstimators(nEstimators int) int
-	predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int)
+	predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int, predictionLeafIndices [][]uint32)
 	resetFVals(fvals []float64)
 }
 
@@ -28,13 +28,13 @@ type Ensemble struct {
 	transform transformation.Transform
 }
 
-func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
+func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, predictions []float64, startIndex int, predictionLeafIndices [][]uint32) {
 	if e.Transformation().Type() == transformation.Raw {
-		e.predictInner(fvals, nEstimators, predictions, startIndex)
+		e.predictInner(fvals, nEstimators, predictions, startIndex, predictionLeafIndices)
 	} else {
 		// TODO: avoid allocation here
 		rawPredictions := make([]float64, e.NRawOutputGroups())
-		e.predictInner(fvals, nEstimators, rawPredictions, 0)
+		e.predictInner(fvals, nEstimators, rawPredictions, 0, predictionLeafIndices)
 		e.transform.Transform(rawPredictions, predictions, startIndex)
 	}
 }
@@ -44,35 +44,55 @@ func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, pr
 // (trees in most cases) will be used. If `len(fvals)` is not enough function
 // will quietly return 0.0.
 // NOTE: for multiclass prediction use Predict
-func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
+func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int, predleaf bool) (float64, []uint32) {
 	if e.NOutputGroups() != 1 {
-		return 0.0
+		return 0.0, nil
 	}
 	if e.NFeatures() > len(fvals) {
-		return 0.0
+		return 0.0, nil
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
 	ret := [1]float64{0.0}
 
-	e.predictInnerAndTransform(fvals, nEstimators, ret[:], 0)
-	return ret[0]
+	if predleaf {
+		predictionLeafIndicesResult := e.allocPredictionLeafIndices(1)
+		e.predictInnerAndTransform(fvals, nEstimators, ret[:], 0, predictionLeafIndicesResult)
+		return ret[0], predictionLeafIndicesResult[0]
+	}
+
+	e.predictInnerAndTransform(fvals, nEstimators, ret[:], 0, nil)
+	return ret[0], nil
 }
 
 // Predict calculates single prediction for one or multiclass ensembles. Only
 // `nEstimators` first estimators (trees in most cases) will be used.
 // NOTE: for single class predictions one can use simplified function PredictSingle
-func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float64) error {
+func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float64, predleaf bool) ([][]uint32, error) {
 	nRows := 1
 	if len(predictions) < e.NOutputGroups()*nRows {
-		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
+		return nil, fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
 	}
 	if e.NFeatures() > len(fvals) {
-		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
+		return nil, fmt.Errorf("incorrect number of features (%d)", len(fvals))
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
 
-	e.predictInnerAndTransform(fvals, nEstimators, predictions, 0)
-	return nil
+	if predleaf {
+		predictionLeafIndicesResult := e.allocPredictionLeafIndices(len(predictions))
+		e.predictInnerAndTransform(fvals, nEstimators, predictions, 0, predictionLeafIndicesResult)
+		return predictionLeafIndicesResult, nil
+	}
+
+	e.predictInnerAndTransform(fvals, nEstimators, predictions, 0, nil)
+	return nil, nil
+}
+
+func (e *Ensemble) allocPredictionLeafIndices(dim int) [][]uint32 {
+	predictionLeafIndicesResult := make([][]uint32, dim)
+	for i := 0; i < dim; i++ {
+		predictionLeafIndicesResult[i] = make([]uint32, e.NEstimators())
+	}
+	return predictionLeafIndicesResult
 }
 
 // PredictCSR calculates predictions from ensemble. `indptr`, `cols`, `vals`
@@ -81,18 +101,23 @@ func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float
 // `nThreads` points to number of threads that will be utilized (maximum
 // is GO_MAX_PROCS)
 // Note, `predictions` slice should be properly allocated on call side
-func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nEstimators int, nThreads int) error {
+func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nEstimators int, nThreads int, predleaf bool) ([][]uint32, error) {
 	nRows := len(indptr) - 1
 	if len(predictions) < e.NOutputGroups()*nRows {
-		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
+		return nil, fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
+	var predictionLeafIndicesResult [][]uint32
+	if predleaf {
+		predictionLeafIndicesResult = e.allocPredictionLeafIndices(len(predictions))
+	}
+
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		// single thread calculations
 		fvals := make([]float64, e.NFeatures())
 		e.resetFVals(fvals)
-		e.predictCSRInner(indptr, cols, vals, 0, len(indptr)-1, predictions, nEstimators, fvals)
-		return nil
+		e.predictCSRInner(indptr, cols, vals, 0, len(indptr)-1, predictions, nEstimators, fvals, predictionLeafIndicesResult)
+		return predictionLeafIndicesResult, nil
 	}
 	if nThreads > runtime.GOMAXPROCS(0) || nThreads < 1 {
 		nThreads = runtime.GOMAXPROCS(0)
@@ -115,7 +140,8 @@ func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predicti
 				if endIndex > nRows {
 					endIndex = nRows
 				}
-				e.predictCSRInner(indptr, cols, vals, startIndex, endIndex, predictions, nEstimators, fvals)
+
+				e.predictCSRInner(indptr, cols, vals, startIndex, endIndex, predictions, nEstimators, fvals, predictionLeafIndicesResult)
 			}
 		}()
 	}
@@ -126,7 +152,7 @@ func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predicti
 	}
 	close(tasks)
 	wg.Wait()
-	return nil
+	return predictionLeafIndicesResult, nil
 }
 
 func (e *Ensemble) predictCSRInner(
@@ -138,6 +164,7 @@ func (e *Ensemble) predictCSRInner(
 	predictions []float64,
 	nEstimators int,
 	fvals []float64,
+	predictionLeafIndices [][]uint32,
 ) {
 	for i := startIndex; i < endIndex; i++ {
 		start := indptr[i]
@@ -147,7 +174,8 @@ func (e *Ensemble) predictCSRInner(
 				fvals[cols[j]] = vals[j]
 			}
 		}
-		e.predictInnerAndTransform(fvals, nEstimators, predictions, i*e.NOutputGroups())
+
+		e.predictInnerAndTransform(fvals, nEstimators, predictions, i*e.NOutputGroups(), predictionLeafIndices)
 		e.resetFVals(fvals)
 	}
 }
@@ -164,21 +192,27 @@ func (e *Ensemble) PredictDense(
 	predictions []float64,
 	nEstimators int,
 	nThreads int,
-) error {
+	predleaf bool,
+) ([][]uint32, error) {
 	nRows := nrows
 	if len(predictions) < e.NOutputGroups()*nRows {
-		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
+		return nil, fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
 	}
 	if ncols == 0 || e.NFeatures() > ncols {
-		return fmt.Errorf("incorrect number of columns")
+		return nil, fmt.Errorf("incorrect number of columns")
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
+	var predictionLeafIndicesResult [][]uint32
+	if predleaf {
+		predictionLeafIndicesResult = e.allocPredictionLeafIndices(len(predictions))
+	}
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		// single thread calculations
 		for i := 0; i < nRows; i++ {
-			e.predictInnerAndTransform(vals[i*ncols:(i+1)*ncols], nEstimators, predictions, i*e.NOutputGroups())
+			fvals := vals[i*ncols : (i+1)*ncols]
+			e.predictInnerAndTransform(fvals, nEstimators, predictions, i*e.NOutputGroups(), predictionLeafIndicesResult)
 		}
-		return nil
+		return predictionLeafIndicesResult, nil
 	}
 	if nThreads > runtime.GOMAXPROCS(0) || nThreads < 1 {
 		nThreads = runtime.GOMAXPROCS(0)
@@ -200,7 +234,7 @@ func (e *Ensemble) PredictDense(
 					endIndex = nRows
 				}
 				for i := startIndex; i < endIndex; i++ {
-					e.predictInnerAndTransform(vals[i*int(ncols):(i+1)*int(ncols)], nEstimators, predictions, i*e.NOutputGroups())
+					e.predictInnerAndTransform(vals[i*int(ncols):(i+1)*int(ncols)], nEstimators, predictions, i*e.NOutputGroups(), predictionLeafIndicesResult)
 				}
 			}
 		}()
@@ -212,7 +246,7 @@ func (e *Ensemble) PredictDense(
 	}
 	close(tasks)
 	wg.Wait()
-	return nil
+	return predictionLeafIndicesResult, nil
 }
 
 // NEstimators returns number of estimators (trees) in ensemble (per group)
