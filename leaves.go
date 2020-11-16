@@ -43,6 +43,8 @@ func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, pr
 // multiclass, will return quitely 0.0. Only `nEstimators` first estimators
 // (trees in most cases) will be used. If `len(fvals)` is not enough function
 // will quietly return 0.0.
+// If `predleaf` is set to true, it will also return leaf index which predicts the
+// result from each estimator.
 // NOTE: for multiclass prediction use Predict
 func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int, predleaf bool) (float64, []uint32) {
 	if e.NOutputGroups() != 1 {
@@ -66,6 +68,8 @@ func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int, predleaf bool
 
 // Predict calculates single prediction for one or multiclass ensembles. Only
 // `nEstimators` first estimators (trees in most cases) will be used.
+// If `predleaf` is set to true, it will also return leaf index which predicts the
+// result from each estimator.
 // NOTE: for single class predictions one can use simplified function PredictSingle
 func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float64, predleaf bool) ([][]uint32, error) {
 	nRows := 1
@@ -100,6 +104,8 @@ func (e *Ensemble) allocPredictionLeafIndices(dim int) [][]uint32 {
 // CSRMat). Only `nEstimators` first estimators (trees) will be used.
 // `nThreads` points to number of threads that will be utilized (maximum
 // is GO_MAX_PROCS)
+// If `predleaf` is set to true, it will also return leaf index which predicts the
+// result from each estimator.
 // Note, `predictions` slice should be properly allocated on call side
 func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nEstimators int, nThreads int, predleaf bool) ([][]uint32, error) {
 	nRows := len(indptr) - 1
@@ -183,7 +189,9 @@ func (e *Ensemble) predictCSRInner(
 // PredictDense calculates predictions from ensemble. `vals`, `rows`, `cols`
 // represent data structures from Rom Major Matrix format (see DenseMat). Only
 // `nEstimators` first estimators (trees in most cases) will be used. `nThreads`
-// points to number of threads that will be utilized (maximum is GO_MAX_PROCS)
+// points to number of threads that will be utilized (maximum is GO_MAX_PROCS).
+// If `predleaf` is set to true, it will also return leaf index which predicts the
+// result from each estimator.
 // Note, `predictions` slice should be properly allocated on call side
 func (e *Ensemble) PredictDense(
 	vals []float64,
