@@ -37,6 +37,10 @@ func (e *lgEnsemble) Name() string {
 	return e.name
 }
 
+func (e *lgEnsemble) NLeaves() []int {
+	return GetNLeaves(e.Trees)
+}
+
 func (e *lgEnsemble) predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int, predictionLeafIndices [][]uint32) {
 	for k := 0; k < e.nRawOutputGroups; k++ {
 		predictions[startIndex+k] = 0.0

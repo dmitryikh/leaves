@@ -13,6 +13,7 @@ import (
 const BatchSize = 16
 
 type ensembleBaseInterface interface {
+	NLeaves() []int
 	NEstimators() int
 	NRawOutputGroups() int
 	NFeatures() int

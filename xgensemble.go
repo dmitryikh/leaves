@@ -33,6 +33,10 @@ func (e *xgEnsemble) NFeatures() int {
 	return 0
 }
 
+func (e *xgEnsemble) NLeaves() []int {
+	return GetNLeaves(e.Trees)
+}
+
 func (e *xgEnsemble) Name() string {
 	return e.name
 }
