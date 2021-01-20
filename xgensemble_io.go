@@ -202,9 +202,23 @@ func XGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 	if origModel.Param.NumRoots != 1 {
 		return nil, fmt.Errorf("support only trees with 1 root (got %d)", origModel.Param.NumRoots)
 	}
-	e.TreeInfo = make([]int, len(origModel.TreeInfo))
-	for i, v := range origModel.TreeInfo {
-		e.TreeInfo[i] = int(v)
+	if len(origModel.TreeInfo) != int(origModel.Param.NumTrees) {
+		return nil, fmt.Errorf("TreeInfo size should be %d (got %d)",
+			int(origModel.Param.NumTrees),
+			len(origModel.TreeInfo))
+	}
+	{
+		// Check that TreeInfo has expected pattern (0 1 2 0 1 2...)
+		curID := 0
+		for i := 0; i < len(origModel.TreeInfo); i++ {
+			if int(origModel.TreeInfo[i]) != curID {
+				return nil, fmt.Errorf("TreeInfo expected to have pattern [0 1 2 0 1 2...] (got %v)", origModel.TreeInfo)
+			}
+			curID++
+			if curID >= e.nRawOutputGroups {
+				curID = 0
+			}
+		}
 	}
 
 	var transform transformation.Transform

@@ -19,6 +19,10 @@ const (
 	Logistic TransformType = 1
 	// Softmax is a TransformType to obtain multiclass probabilities
 	Softmax TransformType = 2
+	// LeafIndex is a TransformType to return leaf indices from decision trees in ensemble
+	LeafIndex TransformType = 3
+
+	Last TransformType = 3
 )
 
 func (t TransformType) Name() string {
@@ -26,8 +30,9 @@ func (t TransformType) Name() string {
 		"raw",
 		"logistic",
 		"softmax",
+		"leaf_index",
 	}
-	if t < Raw || t > Softmax {
+	if t < Raw || t > Last {
 		return "unknown"
 	}
 

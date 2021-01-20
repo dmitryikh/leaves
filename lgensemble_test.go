@@ -189,11 +189,17 @@ func TestLGTreeLeaves3(t *testing.T) {
 	check(0.54)
 }
 
-func checkPredLeaves(t *testing.T, predicted [][]uint32, truth *mat.DenseMat, test *mat.DenseMat) {
-	for row := 0; row < test.Rows; row++ {
-		for idx, predLeaf := range predicted[row] {
-			if uint32(truth.Values[row*truth.Cols+idx]) != predLeaf {
-				t.Fatalf("Predicted leaves don't match %v, %v at pos %d", predicted, truth.Values, idx)
+func checkPredLeaves(t *testing.T, predicted []float64, trueIds *mat.DenseMat) {
+	rows := trueIds.Rows
+	cols := trueIds.Cols
+	if len(predicted) != rows*cols {
+		t.Fatalf("predeicted size mismatch")
+	}
+
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
+			if uint32(trueIds.Values[row*cols+col]) != uint32(predicted[row*cols+col]) {
+				t.Fatalf("Predicted leaves don't match %v, %v at row = %d, col = %d", predicted, trueIds.Values, row, col)
 			}
 		}
 	}
@@ -208,39 +214,40 @@ func TestLGPredLeaf(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	model = model.EnsembleWithLeafPredictions()
 
 	test, err := mat.DenseMatFromCsvFile(testPath, 0, false, " ", 0.0)
 	predLeavesTruth, err := mat.DenseMatFromCsvFile(predLeavesTruthPath, 0, false, " ", 0.0)
 
 	// Test Single
 	fvals := test.Values[:test.Cols]
-	_, predictionsLeafIndexSingle := model.PredictSingle(fvals, 0, true)
-	checkPredLeaves(t, [][]uint32{predictionsLeafIndexSingle}, predLeavesTruth, &mat.DenseMat{Values: test.Values, Cols: test.Cols, Rows: 1})
+	res := model.PredictSingle(fvals, 0)
+	if res != 0.0 {
+		t.Errorf("Failed PredictSingle should return 0.0")
+	}
 
 	// Test Single
-	predictions := make([]float64, 1)
-	predictionsLeafIndex, err := model.Predict(fvals, 0, predictions, true)
+	predictions := make([]float64, 1*model.NOutputGroups())
+	err = model.Predict(fvals, 0, predictions)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPredLeaves(t, predictionsLeafIndex, predLeavesTruth, &mat.DenseMat{Values: test.Values, Cols: test.Cols, Rows: 1})
+	checkPredLeaves(t, predictions, &mat.DenseMat{Values: predLeavesTruth.Values[0:predLeavesTruth.Cols], Cols: predLeavesTruth.Cols, Rows: 1})
 
 	// Test Dense
-	predictionsDense := make([]float64, test.Rows)
-	predictionsLeafIndexDense, err := model.PredictDense(
-		test.Values, test.Rows, test.Cols, predictionsDense, 0, 0, true)
+	predictionsDense := make([]float64, test.Rows*model.NOutputGroups())
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictionsDense, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPredLeaves(t, predictionsLeafIndexDense, predLeavesTruth, test)
+	checkPredLeaves(t, predictionsDense, predLeavesTruth)
 
 	// Test batch and multi thread
-	predictionsLeafIndexDense, err = model.PredictDense(
-		test.Values, test.Rows, test.Cols, predictionsDense, 0, 5, true)
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictionsDense, 0, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPredLeaves(t, predictionsLeafIndexDense, predLeavesTruth, test)
+	checkPredLeaves(t, predictionsDense, predLeavesTruth)
 
 	testCSR, err := mat.CSRMatFromArray(test.Values, test.Rows, test.Cols)
 	if err != nil {
@@ -248,19 +255,19 @@ func TestLGPredLeaf(t *testing.T) {
 	}
 
 	// Test CSR
-	predictionsCSR := make([]float64, test.Rows)
-	predictionsLeafIndexCSR, err := model.PredictCSR(testCSR.RowHeaders, testCSR.ColIndexes, testCSR.Values, predictionsCSR, 0, 1, true)
+	predictionsCSR := make([]float64, testCSR.Rows()*model.NOutputGroups())
+	err = model.PredictCSR(testCSR.RowHeaders, testCSR.ColIndexes, testCSR.Values, predictionsCSR, 0, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPredLeaves(t, predictionsLeafIndexCSR, predLeavesTruth, test)
+	checkPredLeaves(t, predictionsCSR, predLeavesTruth)
 
 	// Test batch and multi thread
-	predictionsLeafIndexCSR, err = model.PredictCSR(testCSR.RowHeaders, testCSR.ColIndexes, testCSR.Values, predictionsCSR, 0, 5, true)
+	err = model.PredictCSR(testCSR.RowHeaders, testCSR.ColIndexes, testCSR.Values, predictionsCSR, 0, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
-	checkPredLeaves(t, predictionsLeafIndexCSR, predLeavesTruth, test)
+	checkPredLeaves(t, predictionsCSR, predLeavesTruth)
 }
 
 func TestLGEnsemble(t *testing.T) {
@@ -287,7 +294,7 @@ func TestLGEnsemble(t *testing.T) {
 
 	// check predictions
 	predictions := make([]float64, denseRows)
-	model.PredictDense(denseValues, denseRows, denseCols, predictions, 0, 0, false)
+	model.PredictDense(denseValues, denseRows, denseCols, predictions, 0, 0)
 
 	truePredictions := []float64{0.29462594, 0.39565483, 0.39565483, 0.69580371, 0.69580371, 0.39565483, 0.29462594}
 	if err := util.AlmostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
@@ -295,7 +302,7 @@ func TestLGEnsemble(t *testing.T) {
 	}
 
 	// check prediction only on first tree
-	model.PredictDense(denseValues, denseRows, denseCols, predictions, 1, 0, false)
+	model.PredictDense(denseValues, denseRows, denseCols, predictions, 1, 0)
 	truePredictions = []float64{0.35849878, 0.41213916, 0.41213916, 0.56697267, 0.56697267, 0.41213916, 0.35849878}
 	if err := util.AlmostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
 		t.Fatalf("predictions on dense not correct (all trees): %s", err.Error())
@@ -327,7 +334,7 @@ func TestLGEnsembleJSON1tree1leaf(t *testing.T) {
 	}
 
 	features := make([]float64, model.NFeatures())
-	pred, _ := model.PredictSingle(features, 0, false)
+	pred := model.PredictSingle(features, 0)
 	if pred != 0.42 {
 		t.Fatalf("expected prediction 0.42 (got %f)", pred)
 	}
@@ -358,7 +365,7 @@ func TestLGEnsembleJSON1tree(t *testing.T) {
 	}
 
 	check := func(features []float64, trueAnswer float64) {
-		pred, _ := model.PredictSingle(features, 0, false)
+		pred := model.PredictSingle(features, 0)
 		if pred != trueAnswer {
 			t.Fatalf("expected prediction %f (got %f)", trueAnswer, pred)
 		}

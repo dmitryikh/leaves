@@ -33,13 +33,17 @@ func (e *xgLinear) NLeaves() []int {
 	return []int{}
 }
 
-func (e *xgLinear) predictInner(fvals []float64, nIterations int, predictions []float64, startIndex int, predictionLeafIndices [][]uint32) {
+func (e *xgLinear) predictInner(fvals []float64, nIterations int, predictions []float64, startIndex int) {
 	for k := 0; k < e.nRawOutputGroups; k++ {
 		predictions[startIndex+k] = e.BaseScore + float64(e.Weights[e.nRawOutputGroups*e.NumFeature+k])
 		for i := 0; i < e.NumFeature; i++ {
 			predictions[startIndex+k] += fvals[i] * float64(e.Weights[e.nRawOutputGroups*i+k])
 		}
 	}
+}
+
+func (e *xgLinear) predictLeafIndicesInner(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
+	// TODO: may be we should return an error here
 }
 
 func (e *xgLinear) resetFVals(fvals []float64) {
