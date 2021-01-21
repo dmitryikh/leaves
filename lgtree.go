@@ -71,9 +71,9 @@ func (t *lgTree) decision(node *lgNode, fval float64) bool {
 	return t.numericalDecision(node, fval)
 }
 
-func (t *lgTree) predict(fvals []float64) float64 {
+func (t *lgTree) predict(fvals []float64) (float64, uint32) {
 	if len(t.nodes) == 0 {
-		return t.leafValues[0]
+		return t.leafValues[0], 0
 	}
 	idx := uint32(0)
 	for {
@@ -81,12 +81,12 @@ func (t *lgTree) predict(fvals []float64) float64 {
 		left := t.decision(node, fvals[node.Feature])
 		if left {
 			if node.Flags&leftLeaf > 0 {
-				return t.leafValues[node.Left]
+				return t.leafValues[node.Left], node.Left
 			}
 			idx = node.Left
 		} else {
 			if node.Flags&rightLeaf > 0 {
-				return t.leafValues[node.Right]
+				return t.leafValues[node.Right], node.Right
 			}
 			idx++
 		}

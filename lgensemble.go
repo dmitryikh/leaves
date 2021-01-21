@@ -33,6 +33,16 @@ func (e *lgEnsemble) NFeatures() int {
 	return 0
 }
 
+func (e *lgEnsemble) NLeaves() []int {
+	nleaves := make([]int, e.NEstimators()*e.NRawOutputGroups())
+	for estimatorID := 0; estimatorID < e.NEstimators(); estimatorID++ {
+		for groupID := 0; groupID < e.NRawOutputGroups(); groupID++ {
+			nleaves[groupID*e.NEstimators()+estimatorID] = e.Trees[estimatorID*e.NRawOutputGroups()+groupID].nLeaves()
+		}
+	}
+	return nleaves
+}
+
 func (e *lgEnsemble) Name() string {
 	return e.name
 }
@@ -41,13 +51,31 @@ func (e *lgEnsemble) predictInner(fvals []float64, nEstimators int, predictions 
 	for k := 0; k < e.nRawOutputGroups; k++ {
 		predictions[startIndex+k] = 0.0
 	}
+
 	coef := 1.0
 	if e.averageOutput {
 		coef = 1.0 / float64(nEstimators)
 	}
+
 	for i := 0; i < nEstimators; i++ {
 		for k := 0; k < e.nRawOutputGroups; k++ {
-			predictions[startIndex+k] += e.Trees[i*e.nRawOutputGroups+k].predict(fvals) * coef
+			pred, _ := e.Trees[i*e.nRawOutputGroups+k].predict(fvals)
+			predictions[startIndex+k] += pred * coef
+		}
+	}
+}
+
+func (e *lgEnsemble) predictLeafIndicesInner(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
+	nResults := e.nRawOutputGroups * nEstimators
+	for k := 0; k < nResults; k++ {
+		predictions[startIndex+k] = 0.0
+	}
+
+	for i := 0; i < nEstimators; i++ {
+		for k := 0; k < e.nRawOutputGroups; k++ {
+			_, idx := e.Trees[i*e.nRawOutputGroups+k].predict(fvals)
+			// note that we save leaf idx as float64 for type consistency over different types of results
+			predictions[startIndex+k*nEstimators+i] = float64(idx)
 		}
 	}
 }

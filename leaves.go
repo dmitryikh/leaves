@@ -16,9 +16,11 @@ type ensembleBaseInterface interface {
 	NEstimators() int
 	NRawOutputGroups() int
 	NFeatures() int
+	NLeaves() []int
 	Name() string
 	adjustNEstimators(nEstimators int) int
 	predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int)
+	predictLeafIndicesInner(fvals []float64, nEstimators int, predictions []float64, startIndex int)
 	resetFVals(fvals []float64)
 }
 
@@ -31,6 +33,8 @@ type Ensemble struct {
 func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
 	if e.Transformation().Type() == transformation.Raw {
 		e.predictInner(fvals, nEstimators, predictions, startIndex)
+	} else if e.Transformation().Type() == transformation.LeafIndex {
+		e.predictLeafIndicesInner(fvals, nEstimators, predictions, startIndex)
 	} else {
 		// TODO: avoid allocation here
 		rawPredictions := make([]float64, e.NRawOutputGroups())
@@ -39,11 +43,19 @@ func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, pr
 	}
 }
 
+func (e *Ensemble) checkNEstimators(nEstimators int) error {
+	if e.transform.Type() == transformation.LeafIndex && nEstimators != e.NEstimators() {
+		return fmt.Errorf("while predicting leaf indices all estimators should be used (provided num. of estimators = %d, should be %d)",
+			nEstimators, e.NEstimators())
+	}
+	return nil
+}
+
 // PredictSingle calculates prediction for single class model. If ensemble is
 // multiclass, will return quitely 0.0. Only `nEstimators` first estimators
 // (trees in most cases) will be used. If `len(fvals)` is not enough function
 // will quietly return 0.0.
-// NOTE: for multiclass prediction use Predict
+// NOTE: for multiclass or leaf indices predictions use Predict
 func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
 	if e.NOutputGroups() != 1 {
 		return 0.0
@@ -52,6 +64,10 @@ func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
 		return 0.0
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
+	err := e.checkNEstimators(nEstimators)
+	if err != nil {
+		return 0.0
+	}
 	ret := [1]float64{0.0}
 
 	e.predictInnerAndTransform(fvals, nEstimators, ret[:], 0)
@@ -70,6 +86,10 @@ func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float
 		return fmt.Errorf("incorrect number of features (%d)", len(fvals))
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
+	err := e.checkNEstimators(nEstimators)
+	if err != nil {
+		return err
+	}
 
 	e.predictInnerAndTransform(fvals, nEstimators, predictions, 0)
 	return nil
@@ -87,6 +107,11 @@ func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predicti
 		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
+	err := e.checkNEstimators(nEstimators)
+	if err != nil {
+		return err
+	}
+
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		// single thread calculations
 		fvals := make([]float64, e.NFeatures())
@@ -115,6 +140,7 @@ func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predicti
 				if endIndex > nRows {
 					endIndex = nRows
 				}
+
 				e.predictCSRInner(indptr, cols, vals, startIndex, endIndex, predictions, nEstimators, fvals)
 			}
 		}()
@@ -147,6 +173,7 @@ func (e *Ensemble) predictCSRInner(
 				fvals[cols[j]] = vals[j]
 			}
 		}
+
 		e.predictInnerAndTransform(fvals, nEstimators, predictions, i*e.NOutputGroups())
 		e.resetFVals(fvals)
 	}
@@ -173,10 +200,16 @@ func (e *Ensemble) PredictDense(
 		return fmt.Errorf("incorrect number of columns")
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
+	err := e.checkNEstimators(nEstimators)
+	if err != nil {
+		return err
+	}
+
 	if nRows <= BatchSize || nThreads == 0 || nThreads == 1 {
 		// single thread calculations
 		for i := 0; i < nRows; i++ {
-			e.predictInnerAndTransform(vals[i*ncols:(i+1)*ncols], nEstimators, predictions, i*e.NOutputGroups())
+			fvals := vals[i*ncols : (i+1)*ncols]
+			e.predictInnerAndTransform(fvals, nEstimators, predictions, i*e.NOutputGroups())
 		}
 		return nil
 	}
@@ -240,6 +273,16 @@ func (e *Ensemble) NFeatures() int {
 	return e.ensembleBaseInterface.NFeatures()
 }
 
+// NLeaves returns number of leaves in each tree of the ensemble. Returned
+// vector has size NRawOutputGroups() * NEstimators(). For example to get number
+// of leaves in group groupID for estimator estimatorID:
+//   NLeaves()[groupID*NEstimators() + estimatorID].
+// In case of NRawOutputGroups() == 1 (binary classification or regression):
+//   NLeaves()[estimatorID]
+func (e *Ensemble) NLeaves() []int {
+	return e.ensembleBaseInterface.NLeaves()
+}
+
 // Name returns name of the estimator
 func (e *Ensemble) Name() string {
 	return e.ensembleBaseInterface.Name()
@@ -254,4 +297,11 @@ func (e *Ensemble) Transformation() transformation.Transform {
 // transformation functions will be applied to the model resulst)
 func (e *Ensemble) EnsembleWithRawPredictions() *Ensemble {
 	return &Ensemble{e, &transformation.TransformRaw{e.NRawOutputGroups()}}
+}
+
+// EnsembleWithLeafPredictions returns ensemble instance with TransformLeafIndex
+// (return trees indices instead of numerical values)
+func (e *Ensemble) EnsembleWithLeafPredictions() *Ensemble {
+	// each predictions will produce NRawOutputGroups() * NEstimators() values
+	return &Ensemble{e, &transformation.TransformLeafIndex{e.NRawOutputGroups() * e.NEstimators()}}
 }

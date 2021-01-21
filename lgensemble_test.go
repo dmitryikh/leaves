@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dmitryikh/leaves/mat"
 	"github.com/dmitryikh/leaves/util"
 )
 
@@ -99,7 +100,7 @@ func TestLGTreeLeaf1(t *testing.T) {
 
 	fvals := []float64{0.0}
 	check := func(truePred float64) {
-		p := tree.predict(fvals)
+		p, _ := tree.predict(fvals)
 		if !util.AlmostEqualFloat64(p, truePred, 1e-3) {
 			t.Errorf("expected prediction %f, got %f", truePred, p)
 		}
@@ -136,7 +137,7 @@ func TestLGTreeLeaves2(t *testing.T) {
 
 	fvals := []float64{0.0}
 	check := func(truePred float64) {
-		p := tree.predict(fvals)
+		p, _ := tree.predict(fvals)
 		if !util.AlmostEqualFloat64(p, truePred, 1e-3) {
 			t.Errorf("expected prediction %f, got %f", truePred, p)
 		}
@@ -171,7 +172,7 @@ func TestLGTreeLeaves3(t *testing.T) {
 
 	fvals := []float64{0.0, 0.0}
 	check := func(truePred float64) {
-		p := tree.predict(fvals)
+		p, _ := tree.predict(fvals)
 		if !util.AlmostEqualFloat64(p, truePred, 1e-3) {
 			t.Errorf("expected prediction %f, got %f", truePred, p)
 		}
@@ -186,6 +187,87 @@ func TestLGTreeLeaves3(t *testing.T) {
 	check(0.35)
 	fvals[1] = 100.0
 	check(0.54)
+}
+
+func checkPredLeaves(t *testing.T, predicted []float64, trueIds *mat.DenseMat) {
+	rows := trueIds.Rows
+	cols := trueIds.Cols
+	if len(predicted) != rows*cols {
+		t.Fatalf("predeicted size mismatch")
+	}
+
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
+			if uint32(trueIds.Values[row*cols+col]) != uint32(predicted[row*cols+col]) {
+				t.Fatalf("Predicted leaves don't match %v, %v at row = %d, col = %d", predicted, trueIds.Values, row, col)
+			}
+		}
+	}
+}
+
+func TestLGPredLeaf(t *testing.T) {
+	modelPath := filepath.Join("testdata", "lg_breast_cancer.txt")
+	testPath := filepath.Join("testdata", "lg_breast_cancer_data.txt")
+	predLeavesTruthPath := filepath.Join("testdata", "lg_breast_cancer_data_pred_leaves.txt")
+
+	model, err := LGEnsembleFromFile(modelPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	model = model.EnsembleWithLeafPredictions()
+
+	test, err := mat.DenseMatFromCsvFile(testPath, 0, false, " ", 0.0)
+	predLeavesTruth, err := mat.DenseMatFromCsvFile(predLeavesTruthPath, 0, false, " ", 0.0)
+
+	// Test Single
+	fvals := test.Values[:test.Cols]
+	res := model.PredictSingle(fvals, 0)
+	if res != 0.0 {
+		t.Errorf("Failed PredictSingle should return 0.0")
+	}
+
+	// Test Single
+	predictions := make([]float64, 1*model.NOutputGroups())
+	err = model.Predict(fvals, 0, predictions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkPredLeaves(t, predictions, &mat.DenseMat{Values: predLeavesTruth.Values[0:predLeavesTruth.Cols], Cols: predLeavesTruth.Cols, Rows: 1})
+
+	// Test Dense
+	predictionsDense := make([]float64, test.Rows*model.NOutputGroups())
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictionsDense, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkPredLeaves(t, predictionsDense, predLeavesTruth)
+
+	// Test batch and multi thread
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictionsDense, 0, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkPredLeaves(t, predictionsDense, predLeavesTruth)
+
+	testCSR, err := mat.CSRMatFromArray(test.Values, test.Rows, test.Cols)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test CSR
+	predictionsCSR := make([]float64, testCSR.Rows()*model.NOutputGroups())
+	err = model.PredictCSR(testCSR.RowHeaders, testCSR.ColIndexes, testCSR.Values, predictionsCSR, 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkPredLeaves(t, predictionsCSR, predLeavesTruth)
+
+	// Test batch and multi thread
+	err = model.PredictCSR(testCSR.RowHeaders, testCSR.ColIndexes, testCSR.Values, predictionsCSR, 0, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkPredLeaves(t, predictionsCSR, predLeavesTruth)
 }
 
 func TestLGEnsemble(t *testing.T) {
@@ -213,6 +295,7 @@ func TestLGEnsemble(t *testing.T) {
 	// check predictions
 	predictions := make([]float64, denseRows)
 	model.PredictDense(denseValues, denseRows, denseCols, predictions, 0, 0)
+
 	truePredictions := []float64{0.29462594, 0.39565483, 0.39565483, 0.69580371, 0.69580371, 0.39565483, 0.29462594}
 	if err := util.AlmostEqualFloat64Slices(predictions, truePredictions, 1e-7); err != nil {
 		t.Fatalf("predictions on dense not correct (all trees): %s", err.Error())
