@@ -221,9 +221,9 @@ func TestLGPredLeaf(t *testing.T) {
 
 	// Test Single
 	fvals := test.Values[:test.Cols]
-	res := model.PredictSingle(fvals, 0)
-	if res != 0.0 {
-		t.Errorf("Failed PredictSingle should return 0.0")
+	_, err = model.PredictSingle(fvals, 0)
+	if err == nil {
+		t.Errorf("PredictSingle should return error for returning leaf indices")
 	}
 
 	// Test Single
@@ -334,7 +334,7 @@ func TestLGEnsembleJSON1tree1leaf(t *testing.T) {
 	}
 
 	features := make([]float64, model.NFeatures())
-	pred := model.PredictSingle(features, 0)
+	pred, _ := model.PredictSingle(features, 0)
 	if pred != 0.42 {
 		t.Fatalf("expected prediction 0.42 (got %f)", pred)
 	}
@@ -365,7 +365,7 @@ func TestLGEnsembleJSON1tree(t *testing.T) {
 	}
 
 	check := func(features []float64, trueAnswer float64) {
-		pred := model.PredictSingle(features, 0)
+		pred, _ := model.PredictSingle(features, 0)
 		if pred != trueAnswer {
 			t.Fatalf("expected prediction %f (got %f)", trueAnswer, pred)
 		}

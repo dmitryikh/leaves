@@ -56,22 +56,22 @@ func (e *Ensemble) checkNEstimators(nEstimators int) error {
 // (trees in most cases) will be used. If `len(fvals)` is not enough function
 // will quietly return 0.0.
 // NOTE: for multiclass or leaf indices predictions use Predict
-func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
+func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) (float64, error) {
 	if e.NOutputGroups() != 1 {
-		return 0.0
+		return 0.0, fmt.Errorf("you have NOutputGroups more than 1 for a single prediction")
 	}
 	if e.NFeatures() > len(fvals) {
-		return 0.0
+		return 0.0, fmt.Errorf("incorrect number of features (%d)", len(fvals))
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
-	err := e.checkNEstimators(nEstimators)
-	if err != nil {
-		return 0.0
-	}
-	ret := [1]float64{0.0}
 
+	if e.transform.Type() == transformation.LeafIndex {
+		return 0.0, fmt.Errorf("for leaf indices predictions use Predict")
+	}
+
+	ret := [1]float64{0.0}
 	e.predictInnerAndTransform(fvals, nEstimators, ret[:], 0)
-	return ret[0]
+	return ret[0], nil
 }
 
 // Predict calculates single prediction for one or multiclass ensembles. Only

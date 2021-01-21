@@ -192,7 +192,7 @@ func InnerTestHiggs(t *testing.T, model *Ensemble, nThreads int, isDense bool, t
 		// check single prediction
 		singleIdx := 100
 		fvals := dense.Values[singleIdx*dense.Cols : (singleIdx+1)*dense.Cols]
-		prediction := model.PredictSingle(fvals, 0)
+		prediction, _ := model.PredictSingle(fvals, 0)
 		if err := util.AlmostEqualFloat64Slices([]float64{truePredictions.Values[singleIdx]}, []float64{prediction}, tolerance); err != nil {
 			t.Errorf("different PredictSingle prediction: %s", err.Error())
 		}
