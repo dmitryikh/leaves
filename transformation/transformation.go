@@ -21,8 +21,11 @@ const (
 	Softmax TransformType = 2
 	// LeafIndex is a TransformType to return leaf indices from decision trees in ensemble
 	LeafIndex TransformType = 3
+	// Exponential is a TransformType that apply exponential function in order to obtain
+	// positive predictions
+	Exponential TransformType = 4
 
-	Last TransformType = 3
+	Last TransformType = 4
 )
 
 func (t TransformType) Name() string {
