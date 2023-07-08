@@ -354,7 +354,10 @@ func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 		if err != nil {
 			return nil, err
 		}
-		if !strings.HasPrefix(objectiveStr, "regression") { // no transformation for regression
+
+		if objectiveStr == "poisson" || objectiveStr == "gamma" || objectiveStr == "tweedie" {
+			transform = &transformation.TransformExponential{}
+		} else if !strings.HasPrefix(objectiveStr, "regression") { // no transformation for regression
 			objectiveStruct, err := lgObjectiveParse(objectiveStr)
 			if err != nil {
 				return nil, err

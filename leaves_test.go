@@ -906,3 +906,118 @@ func TestLGJsonBreastCancer(t *testing.T) {
 		t.Errorf("different predictions: %s", err.Error())
 	}
 }
+
+func TestGenlinFMTPPoisson(t *testing.T) {
+	testPath := filepath.Join("testdata", "genlin_fmtp_poisson_Frequency_features.tsv")
+	modelPath := filepath.Join("testdata", "genlin_fmtp_poisson_Frequency.model")
+	truePath := filepath.Join("testdata", "genlin_fmtp_poisson_Frequency_true_predictions.txt")
+
+	skipTestIfFileNotExist(t, testPath, truePath, modelPath)
+
+	// loading test data
+	test, err := mat.DenseMatFromCsvFile(testPath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	model, err := LGEnsembleFromFile(modelPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, test.Rows*model.NOutputGroups())
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// compare results
+	const tolerance = 1e-6
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+		t.Errorf("different predictions: %s", err.Error())
+	}
+}
+
+
+func TestGenlinFMTPGamma(t *testing.T) {
+	testPath := filepath.Join("testdata", "genlin_fmtp_gamma_AvgClaimAmount_features.tsv")
+	modelPath := filepath.Join("testdata", "genlin_fmtp_gamma_AvgClaimAmount.model")
+	truePath := filepath.Join("testdata", "genlin_fmtp_gamma_AvgClaimAmount_true_predictions.txt")
+
+	skipTestIfFileNotExist(t, testPath, truePath, modelPath)
+
+	// loading test data
+	test, err := mat.DenseMatFromCsvFile(testPath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	model, err := LGEnsembleFromFile(modelPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, test.Rows*model.NOutputGroups())
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// compare results
+	const tolerance = 1e-6
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+		t.Errorf("different predictions: %s", err.Error())
+	}
+}
+
+func TestGenlinFMTPTweedie(t *testing.T) {
+	testPath := filepath.Join("testdata", "genlin_fmtp_tweedie_PurePremium_features.tsv")
+	modelPath := filepath.Join("testdata", "genlin_fmtp_tweedie_PurePremium.model")
+	truePath := filepath.Join("testdata", "genlin_fmtp_tweedie_PurePremium_true_predictions.txt")
+
+	skipTestIfFileNotExist(t, testPath, truePath, modelPath)
+
+	// loading test data
+	test, err := mat.DenseMatFromCsvFile(testPath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	model, err := LGEnsembleFromFile(modelPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, "\t", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, test.Rows*model.NOutputGroups())
+	err = model.PredictDense(test.Values, test.Rows, test.Cols, predictions, 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// compare results
+	const tolerance = 1e-6
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, tolerance); err != nil {
+		t.Errorf("different predictions: %s", err.Error())
+	}
+}

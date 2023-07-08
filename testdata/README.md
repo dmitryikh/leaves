@@ -251,3 +251,11 @@ ds.dump_svmlight_file(test_X, test_Y, 'dermatology_test.libsvm')
     cd testdata
     python lg_kddcup99.py bench
   ```
+
+
+## French Motor Third-Party Liability Claims for LightGBM model
+  1. run
+  ```sh
+    cd testdata
+    python genlin_fmtp.py
+  ```
