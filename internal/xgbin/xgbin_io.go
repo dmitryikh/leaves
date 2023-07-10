@@ -11,42 +11,44 @@ import (
 // Note: XGBosst widely use int type which is machine depended. Go's int32 should cover most common case
 // Note: Data structures' fields comments are take from original XGBoost source code
 
-// LearnerModelParam - training parameter for regression.
+// LearnerModelParamLegacy - training parameter for regression.
 // from src/learner.cc
-type LearnerModelParam struct {
+type LearnerModelParamLegacy struct {
 	// global bias
-	BaseScore float32
+	BaseScore float32 `json:"base_score,string"`
 	// number of features
-	NumFeatures uint32
+	NumFeatures uint32 `json:"num_feature,string"`
 	// number of classes, if it is multi-class classification
-	NumClass int32
+	NumClass int32 `json:"num_class,string"`
 	// Model contain additional properties
 	ContainExtraAttrs int32
 	// Model contain eval metrics
 	ContainEvalMetrics int32
+	MajorVersion       uint32
+	MinorVersion       uint32
 	// reserved field
-	Reserved [29]int32
+	Reserved [27]int32
 }
 
 // GBTreeModelParam - model parameters
 // from src/gbm/gbtree_model.h
 type GBTreeModelParam struct {
 	// number of trees
-	NumTrees int32
+	NumTrees int32 `json:"num_trees,string"`
 	// number of roots
-	NumRoots int32
+	DeprecatedNumRoots int32
 	// number of features to be used by trees
-	NumFeature int32
+	DeprecatedNumFeature int32
 	// pad this space, for backward compatibility reason
 	Pad32bit int32
 	// deprecated padding space.
-	NumPbufferDeprecated int64
+	DeprecatedNumPbufferDeprecated int64
 	// how many output group a single instance can produce
 	// this affects the behavior of number of output we have:
 	// suppose we have n instance and k group, output will be k * n
-	NumOutputGroup int32
+	DeprecatedNumOutputGroup int32
 	// size of leaf vector needed in tree
-	SizeLeafVector int32
+	SizeLeafVector int32 `json:"size_leaf_vector,string"`
 	// reserved parameters
 	Reserved [32]int32
 }
@@ -57,16 +59,16 @@ type TreeParam struct {
 	// number of start root
 	NumRoots int32
 	// total number of nodes
-	NumNodes int32
+	NumNodes int32 `json:"num_nodes,string"`
 	// number of deleted nodes
 	NumDeleted int32
 	// maximum depth, this is a statistics of the tree
 	MaxDepth int32
 	// number of features used for tree construction
-	NumFeature int32
+	NumFeature int32 `json:"num_feature,string"`
 	// leaf vector size, used for vector tree
 	// used to store more than one dimensional information in tree
-	SizeLeafVector int32
+	SizeLeafVector int32 `json:"size_leaf_vector,string"`
 	// reserved part, make sure alignment works for 64bit
 	Reserved [31]int32
 }
@@ -123,7 +125,7 @@ type TreeModel struct {
 	Stats []RTreeNodeStat
 	// // leaf vector, that is used to store additional information
 	// LeafVector []float32
-	Param TreeParam
+	Param TreeParam `json:"tree_param"`
 }
 
 // GBTreeModel contains all input data related to gbtree model. Used just as a
@@ -140,7 +142,7 @@ type GBTreeModel struct {
 // file. Used just as a container of input data for go implementation. Objects
 // layout could be arbitrary
 type ModelHeader struct {
-	Param   LearnerModelParam
+	Param   LearnerModelParamLegacy
 	NameObj string
 	NameGbm string
 }
@@ -317,4 +319,10 @@ func ReadGBLinearModel(reader *bufio.Reader) (*GBLinearModel, error) {
 		return nil, err
 	}
 	return gbLinearModel, nil
+}
+
+func ReadBinf(reader *bufio.Reader) {
+	if peek, err := reader.Peek(4); err == nil && string(peek) == "binf" {
+		_, _ = reader.Read(make([]byte, 4))
+	}
 }

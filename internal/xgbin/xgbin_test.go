@@ -9,7 +9,7 @@ import (
 )
 
 func TestReadGBTree(t *testing.T) {
-	path := filepath.Join("..", "..", "testdata", "xgagaricus.model")
+	path := filepath.Join("..", "..", "testdata", "xgagaricus_previous_version.model")
 	reader, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -33,9 +33,9 @@ func TestReadGBTree(t *testing.T) {
 	}
 	trueGBTreeModelParam := GBTreeModelParam{}
 	trueGBTreeModelParam.NumTrees = 3
-	trueGBTreeModelParam.NumRoots = 1
-	trueGBTreeModelParam.NumFeature = 127
-	trueGBTreeModelParam.NumOutputGroup = 1
+	trueGBTreeModelParam.DeprecatedNumRoots = 1
+	trueGBTreeModelParam.DeprecatedNumFeature = 127
+	trueGBTreeModelParam.DeprecatedNumOutputGroup = 1
 	if !reflect.DeepEqual(trueGBTreeModelParam, gBTreeModel.Param) {
 		t.Fatalf("unexpected GBTreeModelParam values (got %v)", gBTreeModel.Param)
 	}

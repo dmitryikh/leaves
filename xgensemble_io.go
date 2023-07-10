@@ -3,9 +3,11 @@ package leaves
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/dmitryikh/leaves/internal/xgbin"
+	"github.com/dmitryikh/leaves/internal/xgjson"
 	"github.com/dmitryikh/leaves/transformation"
 )
 
@@ -132,124 +134,124 @@ func xgTreeFromTreeModel(origTree *xgbin.TreeModel, numFeatures uint32) (lgTree,
 	return t, nil
 }
 
-// XGEnsembleFromReader reads XGBoost model from `reader`. Works with 'gbtree' and 'dart' models
-func XGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensemble, error) {
-	e := &xgEnsemble{}
-
-	// reading header info
-	header, err := xgbin.ReadModelHeader(reader)
-	if err != nil {
+func readWeightDropFromReader(reader *bufio.Reader, numTrees int, modelName string) ([]float64, error) {
+	origModelWeightDrop := make([]float64, numTrees)
+	if err := checkModelName(modelName); err != nil {
 		return nil, err
 	}
-	if header.NameGbm == "gbtree" {
-		e.name = "xgboost.gbtree"
-	} else if header.NameGbm == "dart" {
-		e.name = "xgboost.dart"
-	} else {
-		return nil, fmt.Errorf("only 'gbtree' or 'dart' is supported (got %s)", header.NameGbm)
-	}
-
-	if header.Param.NumFeatures == 0 {
-		return nil, fmt.Errorf("zero number of features")
-	}
-	e.MaxFeatureIdx = int(header.Param.NumFeatures) - 1
-	e.BaseScore = float64(header.Param.BaseScore)
-
-	// reading gbtree
-	origModel, err := xgbin.ReadGBTreeModel(reader)
-	if err != nil {
-		return nil, err
-	}
-	if origModel.Param.NumFeature > int32(header.Param.NumFeatures) {
-		return nil, fmt.Errorf(
-			"gbtee number of features %d, but header number of features %d",
-			origModel.Param.NumFeature,
-			header.Param.NumFeatures,
-		)
-	}
-
-	e.WeightDrop = make([]float64, origModel.Param.NumTrees)
-	if header.NameGbm == "dart" {
+	if modelName == "dart" {
 		// read additional float32 slice of weighs of dropped trees. Only for 'dart' models
 		weightDrop, err := xgbin.ReadFloat32Slice(reader)
 		if err != nil {
 			return nil, err
 		}
-		if len(weightDrop) != int(origModel.Param.NumTrees) {
+		if len(weightDrop) != numTrees {
 			return nil, fmt.Errorf(
 				"unexpected len(weightDrop) for 'dart' (got: %d, expected: %d)",
 				len(weightDrop),
-				origModel.Param.NumTrees,
+				numTrees,
 			)
 		}
 		for i, v := range weightDrop {
-			e.WeightDrop[i] = float64(v)
+			origModelWeightDrop[i] = float64(v)
 		}
-	} else if header.NameGbm == "gbtree" {
+	} else if modelName == "gbtree" {
 		// use 1.0 as default. 1.0 scale will not break down anything
-		for i := 0; i < int(origModel.Param.NumTrees); i++ {
-			e.WeightDrop[i] = 1.0
+		for i := 0; i < numTrees; i++ {
+			origModelWeightDrop[i] = 1.0
 		}
+	}
+	return origModelWeightDrop, nil
+}
+
+// XGEnsembleFromReader reads XGBoost model from `reader`. Works with 'gbtree' and 'dart' models
+func XGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensemble, error) {
+	e := &xgEnsemble{}
+
+	//to support version after 1.0.0
+	xgbin.ReadBinf(reader)
+	// reading header info
+	header, err := xgbin.ReadModelHeader(reader)
+	if err != nil {
+		return nil, err
+	}
+	// reading gbtree
+	origModel, err := xgbin.ReadGBTreeModel(reader)
+	if err != nil {
+		return nil, err
+	}
+	if e.name, err = createModelName(header.NameGbm); err != nil {
+		return nil, err
+	}
+	if e.MaxFeatureIdx, err = calculateMaxFeatureIdx(int(header.Param.NumFeatures)); err != nil {
+		return nil, err
+	}
+	//To support version before 1.0.0
+	if header.Param.MajorVersion > uint32(0) {
+		e.nRawOutputGroups = getNRawOutputGroups(header.Param.NumClass)
+		e.BaseScore = calculateBaseScoreFromLearnerParam(float64(header.Param.BaseScore))
 	} else {
-		return nil, fmt.Errorf("unsupported model type (got: %s)", header.NameGbm)
+		e.nRawOutputGroups = getNRawOutputGroups(origModel.Param.DeprecatedNumOutputGroup)
+		e.BaseScore = float64(header.Param.BaseScore)
+	}
+	if origModel.Param.DeprecatedNumFeature > int32(header.Param.NumFeatures) {
+		return nil, fmt.Errorf(
+			"gbtee number of features %d, but header number of features %d",
+			origModel.Param.DeprecatedNumFeature,
+			header.Param.NumFeatures,
+		)
+	}
+
+	if e.WeightDrop, err = readWeightDropFromReader(reader, int(origModel.Param.NumTrees), header.NameGbm); err != nil {
+		return nil, err
 	}
 	// TODO: below is not true (see Agaricus test). Why?
-	// if header.Param.NumClass != origModel.Param.NumOutputGroup {
+	// if header.GbTreeModelParam.NumClass != origModel.GbTreeModelParam.DeprecatedNumOutputGroup {
 	// 	return nil, fmt.Errorf("header number of class and model number of class should be the same (%d != %d)",
-	// 		header.Param.NumClass, origModel.Param.NumOutputGroup)
+	// 		header.GbTreeModelParam.NumClass, origModel.GbTreeModelParam.DeprecatedNumOutputGroup)
 	// }
-	e.nRawOutputGroups = int(origModel.Param.NumOutputGroup)
-	if origModel.Param.NumRoots != 1 {
-		return nil, fmt.Errorf("support only trees with 1 root (got %d)", origModel.Param.NumRoots)
+	if origModel.Param.DeprecatedNumRoots != 1 {
+		return nil, fmt.Errorf("support only trees with 1 root (got %d)", origModel.Param.DeprecatedNumRoots)
 	}
 	if len(origModel.TreeInfo) != int(origModel.Param.NumTrees) {
 		return nil, fmt.Errorf("TreeInfo size should be %d (got %d)",
 			int(origModel.Param.NumTrees),
 			len(origModel.TreeInfo))
 	}
-	{
-		// Check that TreeInfo has expected pattern (0 1 2 0 1 2...)
-		curID := 0
-		for i := 0; i < len(origModel.TreeInfo); i++ {
-			if int(origModel.TreeInfo[i]) != curID {
-				return nil, fmt.Errorf("TreeInfo expected to have pattern [0 1 2 0 1 2...] (got %v)", origModel.TreeInfo)
-			}
-			curID++
-			if curID >= e.nRawOutputGroups {
-				curID = 0
-			}
-		}
+	if err = checkTreeInfo(origModel.TreeInfo, e.nRawOutputGroups); err != nil {
+		return nil, err
 	}
 
-	var transform transformation.Transform
-	transform = &transformation.TransformRaw{e.nRawOutputGroups}
-	if loadTransformation {
-		if header.NameObj == "binary:logistic" {
-			transform = &transformation.TransformLogistic{}
-		} else {
-			return nil, fmt.Errorf("unknown transformation function '%s'", header.NameObj)
-		}
+	transform, err := createTransform(loadTransformation, e.nRawOutputGroups, header.NameObj)
+	if err != nil {
+		return nil, err
 	}
-
-	nTrees := origModel.Param.NumTrees
-	if nTrees == 0 {
-		return nil, fmt.Errorf("no trees in model")
-	}
-
-	// reading particular trees
-	e.Trees = make([]lgTree, 0, nTrees)
-	for i := int32(0); i < nTrees; i++ {
-		tree, err := xgTreeFromTreeModel(origModel.Trees[i], header.Param.NumFeatures)
-		if err != nil {
-			return nil, fmt.Errorf("error while reading %d tree: %s", i, err.Error())
-		}
-		e.Trees = append(e.Trees, tree)
+	if e.Trees, err = createTrees(origModel.Param.NumTrees, header.Param.NumFeatures, origModel); err != nil {
+		return nil, err
 	}
 	return &Ensemble{e, transform}, nil
 }
 
-// XGEnsembleFromFile reads XGBoost model from binary file. Works with 'gbtree' and 'dart' models
+func checkTreeInfo(treeInfo []int32, nRawOutputGroups int) error {
+	// Check that TreeInfo has expected pattern (0 1 2 0 1 2...)
+	curID := 0
+	for i := 0; i < len(treeInfo); i++ {
+		if int(treeInfo[i]) != curID {
+			return fmt.Errorf("TreeInfo expected to have pattern [0 1 2 0 1 2...] (got %v)", treeInfo)
+		}
+		curID++
+		if curID >= nRawOutputGroups {
+			curID = 0
+		}
+	}
+	return nil
+}
+
+// XGEnsembleFromFile reads XGBoost model from binary file or json file. Works with 'gbtree' and 'dart' models
 func XGEnsembleFromFile(filename string, loadTransformation bool) (*Ensemble, error) {
+	if ensemble, err := xgEnsembleFromJsonFile(filename, loadTransformation); err == nil {
+		return ensemble, nil
+	}
 	reader, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -257,4 +259,125 @@ func XGEnsembleFromFile(filename string, loadTransformation bool) (*Ensemble, er
 	defer reader.Close()
 	bufReader := bufio.NewReader(reader)
 	return XGEnsembleFromReader(bufReader, loadTransformation)
+}
+
+func xgEnsembleFromJsonFile(filename string, loadTransformation bool) (*Ensemble, error) {
+	gbTreeJson, err := xgjson.ReadGBTree(filename)
+	if err != nil {
+		return nil, err
+	}
+	e, err := createXGEnsembleFromGBTreeJson(gbTreeJson)
+	if err != nil {
+		return nil, err
+	}
+	transform, err := createTransform(loadTransformation, e.nRawOutputGroups, gbTreeJson.Learner.Objective.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &Ensemble{e, transform}, nil
+}
+
+func createXGEnsembleFromGBTreeJson(gbTreeJson *xgjson.GBTreeJson) (*xgEnsemble, error) {
+	e := &xgEnsemble{}
+	var err error
+	e.nRawOutputGroups = getNRawOutputGroups(gbTreeJson.Learner.LearnerModelParam.NumClass)
+	e.BaseScore = calculateBaseScoreFromLearnerParam(float64(gbTreeJson.Learner.LearnerModelParam.BaseScore))
+	if e.MaxFeatureIdx, err = calculateMaxFeatureIdx(int(gbTreeJson.Learner.LearnerModelParam.NumFeatures)); err != nil {
+		return nil, err
+	}
+	if e.name, err = createModelName(gbTreeJson.Learner.GradientBooster.Name); err != nil {
+		return nil, err
+	}
+	e.WeightDrop, err = getWeightDrop(gbTreeJson)
+	if err != nil {
+		return nil, err
+	}
+	if err = checkTreeInfo(gbTreeJson.Learner.GradientBooster.Model.TreeInfo, e.nRawOutputGroups); err != nil {
+		return nil, err
+	}
+	e.Trees, err = createTrees(
+		gbTreeJson.Learner.GradientBooster.Model.GbTreeModelParam.NumTrees,
+		gbTreeJson.Learner.LearnerModelParam.NumFeatures,
+		gbTreeJson.Learner.GradientBooster.Model.ToBinGBTreeModel(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+func checkModelName(name string) error {
+	switch name {
+	case "dart", "gbtree":
+		return nil
+	default:
+		return fmt.Errorf("only 'gbtree' or 'dart' is supported (got %s)", name)
+	}
+}
+
+func createModelName(name string) (string, error) {
+	if err := checkModelName(name); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("xgboost.%s", name), nil
+}
+
+func calculateMaxFeatureIdx(numFeatures int) (int, error) {
+	if maxFeatureIdx := numFeatures - 1; maxFeatureIdx < 0 {
+		return -1, fmt.Errorf("zero number of features")
+	} else {
+		return maxFeatureIdx, nil
+	}
+}
+
+func calculateBaseScoreFromLearnerParam(rawBaseScore float64) float64 {
+	return math.Log(rawBaseScore) - math.Log(1-rawBaseScore)
+}
+
+func getNRawOutputGroups(numClass int32) int {
+	nRawOutputGroups := 1
+	if numClass != 0 {
+		nRawOutputGroups = int(numClass)
+	}
+	return nRawOutputGroups
+}
+
+func getWeightDrop(gbTreeJson *xgjson.GBTreeJson) ([]float64, error) {
+	weightDrop := make([]float64, gbTreeJson.Learner.GradientBooster.Model.GbTreeModelParam.NumTrees)
+	if gbTreeJson.Learner.GradientBooster.Name == "dart" {
+		weightDrop = gbTreeJson.Learner.GradientBooster.WeightDrop
+	} else if gbTreeJson.Learner.GradientBooster.Name == "gbtree" {
+		for idx := range weightDrop {
+			weightDrop[idx] = 1.0
+		}
+	}
+	return weightDrop, nil
+}
+
+func createTrees(numTrees int32, numFeatures uint32, model *xgbin.GBTreeModel) ([]lgTree, error) {
+	if numTrees == 0 {
+		return nil, fmt.Errorf("no trees in model")
+	}
+	trees := make([]lgTree, 0, numTrees)
+	for i := int32(0); i < numTrees; i++ {
+		tree, err := xgTreeFromTreeModel(model.Trees[i], numFeatures)
+		if err != nil {
+			return nil, fmt.Errorf("error while reading %d tree: %s", i, err.Error())
+		}
+		trees = append(trees, tree)
+	}
+	return trees, nil
+}
+
+func createTransform(loadTransformation bool, nRawOutputGroups int, objectiveName string) (transformation.Transform, error) {
+	var transform transformation.Transform
+	transform = &transformation.TransformRaw{NumOutputGroups: nRawOutputGroups}
+	if loadTransformation {
+		if objectiveName == "binary:logistic" {
+			transform = &transformation.TransformLogistic{}
+		} else {
+			return nil, fmt.Errorf("unknown transformation function '%s'", objectiveName)
+		}
+	}
+	return transform, nil
 }

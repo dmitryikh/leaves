@@ -283,6 +283,7 @@ replace "github.com/dmitryikh/leaves" v0.0.0 => "{self.leaves_path}"
 
             self.logger.info(f'Build {script_filename}')
             execute_wrapper(['go', 'build', script_filename])
+            print(script_filename)
 
             executable_filename = script_filename[:-3]
             if not os.path.isfile(executable_filename):

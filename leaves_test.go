@@ -284,16 +284,41 @@ func BenchmarkLGHiggs_csr_4thread(b *testing.B) {
 }
 
 func TestXGAgaricus(t *testing.T) {
-	InnerTestXGAgaricus(t, 1)
-	InnerTestXGAgaricus(t, 2)
-	InnerTestXGAgaricus(t, 3)
-	InnerTestXGAgaricus(t, 4)
+	modelName := "xgagaricus.model"
+	InnerTestXGAgaricus(t, modelName, 1)
+	InnerTestXGAgaricus(t, modelName, 2)
+	InnerTestXGAgaricus(t, modelName, 3)
+	InnerTestXGAgaricus(t, modelName, 4)
 }
 
-func InnerTestXGAgaricus(t *testing.T, nThreads int) {
+func TestXGPreviouseVersionAgaricus(t *testing.T) {
+	modelName := "xgagaricus_previous_version.model"
+	InnerTestXGAgaricus(t, modelName, 1)
+	InnerTestXGAgaricus(t, modelName, 2)
+	InnerTestXGAgaricus(t, modelName, 3)
+	InnerTestXGAgaricus(t, modelName, 4)
+}
+
+func TestXGVersion1_0_0Agaricus(t *testing.T) {
+	modelName := "xgagaricus_1.0.0.model"
+	InnerTestXGAgaricus(t, modelName, 1)
+	InnerTestXGAgaricus(t, modelName, 2)
+	InnerTestXGAgaricus(t, modelName, 3)
+	InnerTestXGAgaricus(t, modelName, 4)
+}
+
+func TestXGJsonAgaricus(t *testing.T) {
+	modelName := "xgagaricus.json"
+	InnerTestXGAgaricus(t, modelName, 1)
+	InnerTestXGAgaricus(t, modelName, 2)
+	InnerTestXGAgaricus(t, modelName, 3)
+	InnerTestXGAgaricus(t, modelName, 4)
+}
+
+func InnerTestXGAgaricus(t *testing.T, modelName string, nThreads int) {
 	// loading test data
 	testPath := filepath.Join("testdata", "agaricus_test.libsvm")
-	modelPath := filepath.Join("testdata", "xgagaricus.model")
+	modelPath := filepath.Join("testdata", modelName)
 	truePath := filepath.Join("testdata", "xgagaricus_true_predictions.txt")
 	skipTestIfFileNotExist(t, testPath, modelPath, truePath)
 	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
@@ -344,22 +369,82 @@ func InnerTestXGAgaricus(t *testing.T, nThreads int) {
 }
 
 func TestXGBLinAgaricus(t *testing.T) {
-	InnerTestXGBLinAgaricus(t, true, 1)
-	InnerTestXGBLinAgaricus(t, true, 2)
-	InnerTestXGBLinAgaricus(t, true, 3)
-	InnerTestXGBLinAgaricus(t, true, 4)
-	InnerTestXGBLinAgaricus(t, false, 1)
-	InnerTestXGBLinAgaricus(t, false, 2)
-	InnerTestXGBLinAgaricus(t, false, 3)
-	InnerTestXGBLinAgaricus(t, false, 4)
+	modelName := "xgblin_agaricus.model"
+	InnerTestXGBLinAgaricus(t, modelName, true, 1)
+	InnerTestXGBLinAgaricus(t, modelName, true, 2)
+	InnerTestXGBLinAgaricus(t, modelName, true, 3)
+	InnerTestXGBLinAgaricus(t, modelName, true, 4)
+	InnerTestXGBLinAgaricus(t, modelName, false, 1)
+	InnerTestXGBLinAgaricus(t, modelName, false, 2)
+	InnerTestXGBLinAgaricus(t, modelName, false, 3)
+	InnerTestXGBLinAgaricus(t, modelName, false, 4)
 }
 
-func InnerTestXGBLinAgaricus(t *testing.T, loadTransformation bool, nThreads int) {
+func TestXGBLinPreviousVersionAgaricus(t *testing.T) {
+	modelName := "xgblin_agaricus_before_1.0.0.model"
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, true, 1)
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, true, 2)
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, true, 3)
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, true, 4)
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, false, 1)
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, false, 2)
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, false, 3)
+	InnerTestXGBLinPreviousVersionAgaricus(t, modelName, false, 4)
+}
+
+func TestXGBJsonLinAgaricus(t *testing.T) {
+	modelName := "xgblin_agaricus.json"
+	InnerTestXGBLinAgaricus(t, modelName, true, 1)
+	InnerTestXGBLinAgaricus(t, modelName, true, 2)
+	InnerTestXGBLinAgaricus(t, modelName, true, 3)
+	InnerTestXGBLinAgaricus(t, modelName, true, 4)
+	InnerTestXGBLinAgaricus(t, modelName, false, 1)
+	InnerTestXGBLinAgaricus(t, modelName, false, 2)
+	InnerTestXGBLinAgaricus(t, modelName, false, 3)
+	InnerTestXGBLinAgaricus(t, modelName, false, 4)
+}
+
+func InnerTestXGBLinAgaricus(t *testing.T, modelName string, loadTransformation bool, nThreads int) {
 	testPath := filepath.Join("testdata", "agaricus_test.libsvm")
-	modelPath := filepath.Join("testdata", "xgblin_agaricus.model")
+	modelPath := filepath.Join("testdata", modelName)
 	truePath := filepath.Join("testdata", "xgblin_agaricus_true_raw_predictions.txt")
 	if loadTransformation {
 		truePath = filepath.Join("testdata", "xgblin_agaricus_true_predictions.txt")
+	}
+
+	// loading test data
+	csr, err := mat.CSRMatFromLibsvmFile(testPath, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading model with or withoud transformation function (depends on loadTransformation)
+	model, err := XGBLinearFromFile(modelPath, loadTransformation)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loading true predictions as DenseMat
+	truePredictions, err := mat.DenseMatFromCsvFile(truePath, 0, false, ",", 0.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// do predictions
+	predictions := make([]float64, csr.Rows())
+	model.PredictCSR(csr.RowHeaders, csr.ColIndexes, csr.Values, predictions, 0, nThreads)
+	// compare results
+	if err := util.AlmostEqualFloat64Slices(truePredictions.Values, predictions, 1e-5); err != nil {
+		t.Fatalf("different predictions: %s", err.Error())
+	}
+}
+
+func InnerTestXGBLinPreviousVersionAgaricus(t *testing.T, modelName string, loadTransformation bool, nThreads int) {
+	testPath := filepath.Join("testdata", "agaricus_test.libsvm")
+	modelPath := filepath.Join("testdata", modelName)
+	truePath := filepath.Join("testdata", "xgblin_agaricus_true_raw_predictions_before_1.0.0.txt")
+	if loadTransformation {
+		truePath = filepath.Join("testdata", "xgblin_agaricus_true_predictions_before_1.0.0.txt")
 	}
 
 	// loading test data
