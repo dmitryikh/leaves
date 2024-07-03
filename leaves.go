@@ -1,7 +1,9 @@
 package leaves
 
 import (
+	"context"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"math"
 	"runtime"
 	"sync"
@@ -19,8 +21,8 @@ type ensembleBaseInterface interface {
 	NLeaves() []int
 	Name() string
 	adjustNEstimators(nEstimators int) int
-	predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int)
-	predictLeafIndicesInner(fvals []float64, nEstimators int, predictions []float64, startIndex int)
+	predictInner(ctx context.Context, fvals []float64, nEstimators int, predictions []float64, startIndex int) error
+	predictLeafIndicesInner(ctx context.Context, fvals []float64, nEstimators int, predictions []float64, startIndex int) error
 	resetFVals(fvals []float64)
 }
 
@@ -30,16 +32,18 @@ type Ensemble struct {
 	transform transformation.Transform
 }
 
-func (e *Ensemble) predictInnerAndTransform(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
+func (e *Ensemble) predictInnerAndTransform(ctx context.Context, fvals []float64, nEstimators int, predictions []float64, startIndex int) error {
 	if e.Transformation().Type() == transformation.Raw {
-		e.predictInner(fvals, nEstimators, predictions, startIndex)
+		return e.predictInner(ctx, fvals, nEstimators, predictions, startIndex)
 	} else if e.Transformation().Type() == transformation.LeafIndex {
-		e.predictLeafIndicesInner(fvals, nEstimators, predictions, startIndex)
+		return e.predictLeafIndicesInner(ctx, fvals, nEstimators, predictions, startIndex)
 	} else {
 		// TODO: avoid allocation here
 		rawPredictions := make([]float64, e.NRawOutputGroups())
-		e.predictInner(fvals, nEstimators, rawPredictions, 0)
-		e.transform.Transform(rawPredictions, predictions, startIndex)
+		if err := e.predictInner(ctx, fvals, nEstimators, rawPredictions, 0); err != nil {
+			return err
+		}
+		return e.transform.Transform(rawPredictions, predictions, startIndex)
 	}
 }
 
@@ -56,28 +60,30 @@ func (e *Ensemble) checkNEstimators(nEstimators int) error {
 // (trees in most cases) will be used. If `len(fvals)` is not enough function
 // will quietly return 0.0.
 // NOTE: for multiclass or leaf indices predictions use Predict
-func (e *Ensemble) PredictSingle(fvals []float64, nEstimators int) float64 {
+func (e *Ensemble) PredictSingle(ctx context.Context, fvals []float64, nEstimators int) (float64, error) {
 	if e.NOutputGroups() != 1 {
-		return 0.0
+		return 0.0, nil
 	}
 	if e.NFeatures() > len(fvals) {
-		return 0.0
+		return 0.0, nil
 	}
 	nEstimators = e.adjustNEstimators(nEstimators)
 	err := e.checkNEstimators(nEstimators)
 	if err != nil {
-		return 0.0
+		return 0.0, nil
 	}
 	ret := [1]float64{0.0}
 
-	e.predictInnerAndTransform(fvals, nEstimators, ret[:], 0)
-	return ret[0]
+	if err = e.predictInnerAndTransform(ctx, fvals, nEstimators, ret[:], 0); err != nil {
+		return 0.0, err
+	}
+	return ret[0], nil
 }
 
 // Predict calculates single prediction for one or multiclass ensembles. Only
 // `nEstimators` first estimators (trees in most cases) will be used.
 // NOTE: for single class predictions one can use simplified function PredictSingle
-func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float64) error {
+func (e *Ensemble) Predict(ctx context.Context, fvals []float64, nEstimators int, predictions []float64) error {
 	nRows := 1
 	if len(predictions) < e.NOutputGroups()*nRows {
 		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
@@ -91,8 +97,7 @@ func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float
 		return err
 	}
 
-	e.predictInnerAndTransform(fvals, nEstimators, predictions, 0)
-	return nil
+	return e.predictInnerAndTransform(ctx, fvals, nEstimators, predictions, 0)
 }
 
 // PredictCSR calculates predictions from ensemble. `indptr`, `cols`, `vals`
@@ -101,7 +106,7 @@ func (e *Ensemble) Predict(fvals []float64, nEstimators int, predictions []float
 // `nThreads` points to number of threads that will be utilized (maximum
 // is GO_MAX_PROCS)
 // Note, `predictions` slice should be properly allocated on call side
-func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predictions []float64, nEstimators int, nThreads int) error {
+func (e *Ensemble) PredictCSR(ctx context.Context, indptr []int, cols []int, vals []float64, predictions []float64, nEstimators int, nThreads int) error {
 	nRows := len(indptr) - 1
 	if len(predictions) < e.NOutputGroups()*nRows {
 		return fmt.Errorf("predictions slice too short (should be at least %d)", e.NOutputGroups()*nRows)
@@ -116,8 +121,7 @@ func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predicti
 		// single thread calculations
 		fvals := make([]float64, e.NFeatures())
 		e.resetFVals(fvals)
-		e.predictCSRInner(indptr, cols, vals, 0, len(indptr)-1, predictions, nEstimators, fvals)
-		return nil
+		return e.predictCSRInner(ctx, indptr, cols, vals, 0, len(indptr)-1, predictions, nEstimators, fvals)
 	}
 	if nThreads > runtime.GOMAXPROCS(0) || nThreads < 1 {
 		nThreads = runtime.GOMAXPROCS(0)
@@ -141,7 +145,7 @@ func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predicti
 					endIndex = nRows
 				}
 
-				e.predictCSRInner(indptr, cols, vals, startIndex, endIndex, predictions, nEstimators, fvals)
+				e.predictCSRInner(ctx, indptr, cols, vals, startIndex, endIndex, predictions, nEstimators, fvals)
 			}
 		}()
 	}
@@ -156,6 +160,7 @@ func (e *Ensemble) PredictCSR(indptr []int, cols []int, vals []float64, predicti
 }
 
 func (e *Ensemble) predictCSRInner(
+	ctx context.Context,
 	indptr []int,
 	cols []int,
 	vals []float64,
@@ -164,7 +169,7 @@ func (e *Ensemble) predictCSRInner(
 	predictions []float64,
 	nEstimators int,
 	fvals []float64,
-) {
+) error {
 	for i := startIndex; i < endIndex; i++ {
 		start := indptr[i]
 		end := indptr[i+1]
@@ -174,9 +179,12 @@ func (e *Ensemble) predictCSRInner(
 			}
 		}
 
-		e.predictInnerAndTransform(fvals, nEstimators, predictions, i*e.NOutputGroups())
+		if err := e.predictInnerAndTransform(ctx, fvals, nEstimators, predictions, i*e.NOutputGroups()); err != nil {
+			return err
+		}
 		e.resetFVals(fvals)
 	}
+	return nil
 }
 
 // PredictDense calculates predictions from ensemble. `vals`, `rows`, `cols`
@@ -185,6 +193,7 @@ func (e *Ensemble) predictCSRInner(
 // points to number of threads that will be utilized (maximum is GO_MAX_PROCS)
 // Note, `predictions` slice should be properly allocated on call side
 func (e *Ensemble) PredictDense(
+	ctx context.Context,
 	vals []float64,
 	nrows int,
 	ncols int,
@@ -209,7 +218,10 @@ func (e *Ensemble) PredictDense(
 		// single thread calculations
 		for i := 0; i < nRows; i++ {
 			fvals := vals[i*ncols : (i+1)*ncols]
-			e.predictInnerAndTransform(fvals, nEstimators, predictions, i*e.NOutputGroups())
+			err = e.predictInnerAndTransform(ctx, fvals, nEstimators, predictions, i*e.NOutputGroups())
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -222,21 +234,23 @@ func (e *Ensemble) PredictDense(
 	}
 	tasks := make(chan int)
 
-	wg := sync.WaitGroup{}
+	errgroup, ctx := errgroup.WithContext(ctx)
 	for i := 0; i < nThreads; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		errgroup.Go(func() error {
 			for startIndex := range tasks {
 				endIndex := startIndex + BatchSize
 				if endIndex > nRows {
 					endIndex = nRows
 				}
 				for i := startIndex; i < endIndex; i++ {
-					e.predictInnerAndTransform(vals[i*int(ncols):(i+1)*int(ncols)], nEstimators, predictions, i*e.NOutputGroups())
+					err = e.predictInnerAndTransform(ctx, vals[i*int(ncols):(i+1)*int(ncols)], nEstimators, predictions, i*e.NOutputGroups())
+					if err != nil {
+						return err
+					}
 				}
 			}
-		}()
+			return nil
+		})
 	}
 
 	// feed the queue
@@ -244,8 +258,7 @@ func (e *Ensemble) PredictDense(
 		tasks <- i * BatchSize
 	}
 	close(tasks)
-	wg.Wait()
-	return nil
+	return errgroup.Wait()
 }
 
 // NEstimators returns number of estimators (trees) in ensemble (per group)

@@ -109,13 +109,13 @@ func (p *stringParams) ToFloat64Slice(key string) ([]float64, error) {
 		return nil, fmt.Errorf("no %s field", key)
 	}
 	valuesStr := strings.Split(valueStr, " ")
-	values := make([]float64, 0, len(valuesStr))
-	for _, vStr := range valuesStr {
+	values := make([]float64, len(valuesStr))
+	for i, vStr := range valuesStr {
 		value, err := strconv.ParseFloat(vStr, 64)
 		if err != nil {
 			return nil, fmt.Errorf("can't convert %s: %s", key, err.Error())
 		}
-		values = append(values, value)
+		values[i] = value
 	}
 	return values, nil
 }
@@ -267,7 +267,7 @@ func SoftmaxFloat64Slice(rawValues []float64, outputValues []float64, startIndex
 	}
 	if sum != 0.0 {
 		inv_sum := 1.0 / sum
-		for i := startIndex; i < startIndex + len(rawValues); i++ {
+		for i := startIndex; i < startIndex+len(rawValues); i++ {
 			outputValues[i] *= inv_sum
 		}
 	}

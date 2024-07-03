@@ -1,6 +1,7 @@
 package leaves
 
 import (
+	"context"
 	"math"
 
 	"github.com/manujz/leaves/util"
@@ -55,7 +56,7 @@ func (e *xgEnsemble) adjustNEstimators(nEstimators int) int {
 	return nEstimators
 }
 
-func (e *xgEnsemble) predictInner(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
+func (e *xgEnsemble) predictInner(ctx context.Context, fvals []float64, nEstimators int, predictions []float64, startIndex int) error {
 	for k := 0; k < e.nRawOutputGroups; k++ {
 		predictions[startIndex+k] = e.BaseScore
 	}
@@ -63,13 +64,18 @@ func (e *xgEnsemble) predictInner(fvals []float64, nEstimators int, predictions 
 	for i := 0; i < nEstimators; i++ {
 		for k := 0; k < e.nRawOutputGroups; k++ {
 			ID := i*e.nRawOutputGroups + k
-			pred, _ := e.Trees[ID].predict(fvals)
+			pred, _, err := e.Trees[ID].predict(ctx, fvals)
+			if err != nil {
+				return err
+			}
 			predictions[startIndex+k] += pred * e.WeightDrop[ID]
 		}
 	}
+
+	return nil
 }
 
-func (e *xgEnsemble) predictLeafIndicesInner(fvals []float64, nEstimators int, predictions []float64, startIndex int) {
+func (e *xgEnsemble) predictLeafIndicesInner(ctx context.Context, fvals []float64, nEstimators int, predictions []float64, startIndex int) error {
 	nResults := e.nRawOutputGroups * nEstimators
 	for k := 0; k < nResults; k++ {
 		predictions[startIndex+k] = 0.0
@@ -77,11 +83,16 @@ func (e *xgEnsemble) predictLeafIndicesInner(fvals []float64, nEstimators int, p
 
 	for i := 0; i < nEstimators; i++ {
 		for k := 0; k < e.nRawOutputGroups; k++ {
-			_, idx := e.Trees[i*e.nRawOutputGroups+k].predict(fvals)
+			_, idx, err := e.Trees[i*e.nRawOutputGroups+k].predict(ctx, fvals)
+			if err != nil {
+				return err
+			}
 			// note that we save leaf idx as float64 for type consistency over different types of results
 			predictions[startIndex+k*nEstimators+i] = float64(idx)
 		}
 	}
+
+	return nil
 }
 
 func (e *xgEnsemble) resetFVals(fvals []float64) {

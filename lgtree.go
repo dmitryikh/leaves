@@ -1,6 +1,8 @@
 package leaves
 
 import (
+	"context"
+	"errors"
 	"math"
 
 	"github.com/manujz/leaves/util"
@@ -71,24 +73,29 @@ func (t *lgTree) decision(node *lgNode, fval float64) bool {
 	return t.numericalDecision(node, fval)
 }
 
-func (t *lgTree) predict(fvals []float64) (float64, uint32) {
+func (t *lgTree) predict(ctx context.Context, fvals []float64) (float64, uint32, error) {
 	if len(t.nodes) == 0 {
-		return t.leafValues[0], 0
+		return t.leafValues[0], 0, nil
 	}
 	idx := uint32(0)
-	for {
-		node := t.nodes[idx]
-		left := fvals[node.Feature] <= node.Threshold
-		if left {
-			if node.Flags&leftLeaf > 0 {
-				return t.leafValues[node.Left], node.Left
+	select {
+	case <-ctx.Done():
+		return -1, 0, errors.New("context cancelled")
+	default:
+		for {
+			node := t.nodes[idx]
+			left := fvals[node.Feature] <= node.Threshold
+			if left {
+				if node.Flags&leftLeaf > 0 {
+					return t.leafValues[node.Left], node.Left, nil
+				}
+				idx = node.Left
+			} else {
+				if node.Flags&rightLeaf > 0 {
+					return t.leafValues[node.Right], node.Right, nil
+				}
+				idx++
 			}
-			idx = node.Left
-		} else {
-			if node.Flags&rightLeaf > 0 {
-				return t.leafValues[node.Right], node.Right
-			}
-			idx++
 		}
 	}
 }
