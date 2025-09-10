@@ -298,11 +298,10 @@ func LGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 		return nil, err
 	}
 
-	if err := params.Compare("version", "v2"); err != nil {
-		if err := params.Compare("version", "v3"); err != nil {
-			return nil, err
-		}
+	if err := params.CompareAll("version", []string{"v2", "v3", "v4"}); err != nil {
+		return nil, err
 	}
+
 	nClasses, err := params.ToInt("num_class")
 	if err != nil {
 		return nil, err
