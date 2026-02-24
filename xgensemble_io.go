@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/dmitryikh/leaves/internal/xgbin"
+	"github.com/dmitryikh/leaves/internal/xgjson"
 	"github.com/dmitryikh/leaves/transformation"
 )
 
@@ -248,7 +251,24 @@ func XGEnsembleFromReader(reader *bufio.Reader, loadTransformation bool) (*Ensem
 	return &Ensemble{e, transform}, nil
 }
 
-// XGEnsembleFromFile reads XGBoost model from binary file. Works with 'gbtree' and 'dart' models
+// XGEnsembleFromFile reads an XGBoost model from a file.
+//
+// Format detection uses both the file extension and a content heuristic so
+// that misnamed files don't silently produce wrong results and to preserve
+// backward compatibility with existing callers:
+//
+//   - .json        → content-verified JSON; falls through to legacy binary if
+//                    content doesn't look like XGBoost JSON
+//   - .ubj/.ubjson → content-verified UBJ; falls through to legacy binary if
+//                    content doesn't look like XGBoost UBJ
+//   - any other    → falls through directly to legacy binary reader
+//
+// Note: for unknown extensions, we intentionally do NOT run content detection
+// and fall straight through to the legacy binary reader. This preserves the
+// existing behavior for all callers who weren't using .json/.ubj extensions.
+// The trade-off is that a JSON/UBJ file named e.g. "model.bin" won't be
+// auto-detected; callers should use XGEnsembleFromJSONFile / XGEnsembleFromUBJFile
+// in that case.
 func XGEnsembleFromFile(filename string, loadTransformation bool) (*Ensemble, error) {
 	reader, err := os.Open(filename)
 	if err != nil {
@@ -256,5 +276,21 @@ func XGEnsembleFromFile(filename string, loadTransformation bool) (*Ensemble, er
 	}
 	defer reader.Close()
 	bufReader := bufio.NewReader(reader)
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".json":
+		if ok, _ := xgjson.LooksLikeJSON(bufReader); ok {
+			return XGEnsembleFromJSONReader(bufReader, loadTransformation)
+		}
+		// Extension says JSON but content doesn't match — fall through to legacy
+		// binary. TODO: consider returning an error here instead, since a caller
+		// who named the file .json almost certainly intended it to be JSON.
+	case ".ubj", ".ubjson":
+		if ok, _ := xgjson.LooksLikeUBJ(bufReader); ok {
+			return XGEnsembleFromUBJReader(bufReader, loadTransformation)
+		}
+		// Extension says UBJ but content doesn't match — fall through to legacy binary.
+		// TODO: consider returning an error here instead.
+	}
 	return XGEnsembleFromReader(bufReader, loadTransformation)
 }
